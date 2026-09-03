@@ -19,6 +19,7 @@ from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_chroma import Chroma
 from duckduckgo_search import DDGS
 from gradio_client import Client
+from huggingface_hub import InferenceClient # A IMPORTAÇÃO QUE ESTAVA FALTANDO!
 
 # ==========================================
 # 1. CHAVES MESTRES E CONEXÕES
@@ -124,7 +125,6 @@ def motor_gerar_imagem(prompt_desc, proporcao="Vertical (TikTok/Reels)"):
     except: return None
 
 def motor_editar_imagem(caminho_imagem, prompt_edicao):
-    # Usando o modelo Instruct-Pix2Pix (Muda o fundo preservando o objeto)
     for tentativa in range(3):
         try:
             res = cliente_hf.image_to_image(
@@ -165,7 +165,7 @@ def motor_gerar_video(prompt_cena, imagem_base=None):
     return None
 
 # ==========================================
-# 5. O CHAT AGÊNTICO ABSOLUTO (V12)
+# 5. O CHAT AGÊNTICO ABSOLUTO
 # ==========================================
 def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessao):
     texto_usuario = mensagem.get("text", "") if isinstance(mensagem, dict) else str(mensagem)
@@ -194,11 +194,10 @@ def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessa
 
     yield "🧠 *Construindo a solução executiva...*"
 
-    # O "Cérebro" que controla tudo no chat
     sys_prompt = f"""Você é um {persona}, um Agente Centralizador Omnichannel de IA (nível Enterprise).
 Responda com excelência técnica, tom direto e clareza.
 
-SEUS 5 PODERES DE AÇÃO NO CHAT (Use apenas SE o usuário pedir explicitly):
+SEUS 5 PODERES DE AÇÃO NO CHAT (Use apenas SE o usuário pedir explicitamente):
 1. GERAR NOVA IMAGEM (Do zero): 
 Inclua em uma linha isolada: [AÇÃO_IMAGEM: descrição altamente detalhada em inglês com 8k photorealistic | vertical] (Use 'vertical' para redes sociais ou 'quadrado').
 
@@ -243,7 +242,6 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
         delta = pedaco.choices[0].delta.content
         if delta:
             resposta_acumulada += delta
-            # Oculta comandos da visão do usuário enquanto digita
             texto_visivel = re.sub(r'\[AÇÃO_\w+:.*?\]', '⚙️ *(Acionando motor multimídia...)*', resposta_acumulada)
             yield texto_visivel
 
@@ -268,7 +266,7 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
     if match_edit and imagens_anexadas:
         prompt_e = match_edit.group(1).strip()
         yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🖌️ *Modificando inteligentemente a imagem enviada (Preservando objeto)...*"
-        cam_edit = motor_editar_imagem(imagens_anexadas[-1], prompt_e) # Edita a última foto enviada
+        cam_edit = motor_editar_imagem(imagens_anexadas[-1], prompt_e)
         if cam_edit and os.path.exists(cam_edit):
             b64_img = encode_file_b64(cam_edit)
             anexos_html += f"\n\n**✨ Imagem Editada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:18px; margin-top:8px; border: 2px solid #10A37F;' />\n"
@@ -300,7 +298,7 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
     resposta_final_limpa = re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada).strip() + anexos_html
     yield resposta_final_limpa
 
-    # Auto-Save do Histórico
+    # Auto-Save
     try:
         sessao_alvo = id_sessao if (id_sessao and id_sessao != "Nenhuma conversa salva") else f"Projeto_{datetime.now().strftime('%d%m_%H%M%S')}"
         arq_sessao = f"{DIR_CHATS}/{sessao_alvo}.json"
@@ -335,6 +333,37 @@ def gerar_backup_zip():
             if "Banco_de_Dados_Vetorial" not in root:
                 for f in files: z.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), DIRETORIO))
     return cam
+
+def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
+    if not instrucao: return "⚠️ Forneça uma instrução.", None, "", ""
+    palavras = 0
+    try:
+        progresso(0.1, desc="Lendo arquivos...")
+        pasta = f"{DIR_CASOS}/Lote_{datetime.now().strftime('%d_%m_%Y__%Hh%M')}"
+        os.makedirs(pasta, exist_ok=True)
+        banco = Chroma(persist_directory=DIR_CHROMA, embedding_function=embeddings)
+        fatiador = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
+        
+        if arquivos:
+            for idx, arq in enumerate(arquivos):
+                txt = extrair_texto(arq)
+                palavras += len(txt.split())
+                banco.add_texts([f"[FONTE: {os.path.basename(arq.name)}]\n{c}" for c in fatiador.split_text(txt)])
+            
+        progresso(0.5, desc="Cruzando inteligência...")
+        contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
+        prompt = f"Você é um Especialista de Inteligência Sênior. DADOS:\n{contexto}\n\nINSTRUÇÃO: {instrucao}"
+        resposta = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ, max_tokens=4000).choices[0].message.content
+        
+        cam_word = f"{pasta}/Relatorio_Executivo.docx"
+        doc = docx.Document()
+        doc.add_heading('Relatório Executivo Oficial', 0)
+        doc.add_paragraph(resposta)
+        doc.save(cam_word)
+        
+        return "✅ Processamento Concluído!", cam_word, resposta, f"📊 {palavras} palavras analisadas com sucesso."
+    except Exception as e:
+        return f"Erro: {e}", None, "", ""
 
 # ==========================================
 # 6. DESIGN SYSTEM PWA NATIVO & MOBILE FIRST
@@ -404,7 +433,7 @@ with gr.Blocks(title="Chat Titã AI", theme=tema_dola_premium, css=css_dola_prem
             
             chat = gr.ChatInterface(
                 fn=responder_chat_central, multimodal=True, additional_inputs=[persona_box, net_box, id_sessao_atual],
-                chatbot=gr.Chatbot(height=720, placeholder="Envie fotos de produtos para editar, PDFs para analisar ou peça vídeos e áudios. A IA faz tudo por aqui...", bubble_full_width=False, render_markdown=True),
+                chatbot=gr.Chatbot(height=720, placeholder="Envie fotos para editar, crie vídeos e imagens do zero, analise dados... Tudo acontece por aqui!", bubble_full_width=False, render_markdown=True),
                 textbox=gr.MultimodalTextbox(placeholder="Digite ou anexe arquivos aqui...", container=False, scale=7),
                 submit_btn="Enviar 🚀", retry_btn="🔄 Refazer", undo_btn="✏️ Editar", clear_btn="🗑️ Limpar Conversa"
             )
@@ -413,6 +442,19 @@ with gr.Blocks(title="Chat Titã AI", theme=tema_dola_premium, css=css_dola_prem
             
             btn_carregar.click(fn=carregar_sessao_chat, inputs=[lista_chats], outputs=[chat.chatbot, id_sessao_atual])
             btn_novo_chat.click(fn=iniciar_novo_chat, outputs=[chat.chatbot, id_sessao_atual, lista_chats])
+            
+        # ABA AUXILIAR DE EXPLORADOR
+        with gr.TabItem("📑 Leitor de Lotes Pesados"):
+            with gr.Row():
+                with gr.Column(scale=4, elem_classes="box-painel"):
+                    arq_lote = gr.File(label="Lote de Documentos (PDF, Word, Excel)", file_count="multiple")
+                    txt_instrucao = gr.Textbox(label="Instrução para a IA", lines=3, placeholder="O que você quer extrair ou cruzar destes documentos?")
+                    btn_lote = gr.Button("Processar Lote Inteiro", variant="primary")
+                    msg_status = gr.Textbox(show_label=False, interactive=False)
+                with gr.Column(scale=6):
+                    txt_relatorio = gr.Textbox(label="Relatório Gerado", lines=18, interactive=False)
+                    out_doc_lote = gr.File(label="Baixar Relatório (Word)")
+            btn_lote.click(fn=gerar_dossie_lote, inputs=[arq_lote, txt_instrucao], outputs=[msg_status, out_doc_lote, txt_relatorio, msg_status])
 
         # ABA AUXILIAR DE EXPLORADOR
         with gr.TabItem("🗂️ Galeria e Cofre"):
