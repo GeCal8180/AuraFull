@@ -16,10 +16,10 @@ from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_chroma import Chroma
 from huggingface_hub import InferenceClient
 from duckduckgo_search import DDGS
-from gradio_client import Client  # O Túnel para processamento de Vídeo
+from gradio_client import Client
 
 # ==========================================
-# 1. CHAVES MESTRES E CONEXÕES EM NUVEM
+# 1. CHAVES MESTRES E CONEXÕES
 # ==========================================
 chave_groq = os.environ.get("GROQ_API_KEY")
 chave_hf = os.environ.get("HF_TOKEN")
@@ -45,11 +45,6 @@ DIR_MIDIA = f"{DIRETORIO}/Midia_Criada"
 for d in [DIRETORIO, DIR_CASOS, DIR_MIDIA]:
     os.makedirs(d, exist_ok=True)
 
-def registrar_log(acao):
-    agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    with open(f"{DIRETORIO}/Log_Sistema.txt", "a", encoding="utf-8") as f: 
-        f.write(f"[{agora}] - {acao}\n")
-
 def listar_arquivos_mortos():
     arquivos = []
     for d in [DIR_CASOS, DIR_MIDIA]:
@@ -61,11 +56,10 @@ def listar_arquivos_mortos():
     return arquivos
 
 # ==========================================
-# 3. EXTRAÇÃO DE DADOS
+# 3. EXTRAÇÃO E FUNÇÕES BASE
 # ==========================================
 def encode_image(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
+    with open(image_path, "rb") as image_file: return base64.b64encode(image_file.read()).decode('utf-8')
 
 def extrair_texto(arquivo):
     caminho = arquivo.name if hasattr(arquivo, 'name') else arquivo
@@ -74,34 +68,31 @@ def extrair_texto(arquivo):
     try:
         if nome.endswith('.pdf'):
             with pdfplumber.open(caminho) as pdf:
-                for pagina in pdf.pages:
-                    txt = pagina.extract_text()
+                for p in pdf.pages:
+                    txt = p.extract_text()
                     if txt: texto += txt + "\n"
-        elif nome.endswith(('.xlsx', '.csv')):
-            texto = (pd.read_excel(caminho) if nome.endswith('.xlsx') else pd.read_csv(caminho)).to_string() 
+        elif nome.endswith(('.xlsx', '.csv')): texto = (pd.read_excel(caminho) if nome.endswith('.xlsx') else pd.read_csv(caminho)).to_string() 
         elif nome.endswith('.docx'):
             for p in docx.Document(caminho).paragraphs: texto += p.text + "\n"
         elif nome.endswith(('.mp3', '.ogg', '.wav')):
-            with open(caminho, "rb") as file:
-                texto = f"[TRANSCRIÇÃO]: {cliente_groq.audio.transcriptions.create(file=(caminho, file.read()), model='whisper-large-v3').text}\n"
+            with open(caminho, "rb") as file: texto = f"[TRANSCRIÇÃO]: {cliente_groq.audio.transcriptions.create(file=(caminho, file.read()), model='whisper-large-v3').text}\n"
         return texto
     except: return ""
 
 def limpar_banco_de_dados():
     try:
         if os.path.exists(DIR_CHROMA): shutil.rmtree(DIR_CHROMA)
-        return "🧹 Memória limpa com sucesso."
+        return "🧹 Memória limpa."
     except Exception as e: return f"Erro: {e}"
 
 def ouvir_microfone(audio_path):
     if not audio_path: return ""
     try:
-        with open(audio_path, "rb") as file:
-            return cliente_groq.audio.transcriptions.create(file=(audio_path, file.read()), model="whisper-large-v3").text
+        with open(audio_path, "rb") as file: return cliente_groq.audio.transcriptions.create(file=(audio_path, file.read()), model="whisper-large-v3").text
     except Exception as e: return f"Erro: {e}"
 
 # ==========================================
-# 4. CHAT MULTIMODAL (MARKETING & ANÁLISE)
+# 4. CHAT ULTRAMODERNO (CORE)
 # ==========================================
 def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
     texto_usuario = mensagem.get("text", "")
@@ -118,7 +109,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             contexto_extra += "\n\n[DADOS WEB]:\n" + "\n".join([f"Fonte: {r['title']} - Resumo: {r['body']}" for r in resultados])
         except: pass
 
-    sys_prompt = f"Você é um {persona}. Responda de forma criativa, estratégica ou técnica, adequando-se perfeitamente ao seu papel."
+    sys_prompt = f"Você é um {persona}. Responda com excelência, clareza e formatação impecável."
     mensagens = [{"role": "system", "content": sys_prompt}]
     
     for h_u, h_a in historico:
@@ -138,7 +129,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
         mensagens.append({"role": "user", "content": texto_final})
         modelo = MODELO_GROQ
 
-    return cliente_groq.chat.completions.create(messages=mensagens, model=modelo, max_tokens=2500).choices[0].message.content
+    return cliente_groq.chat.completions.create(messages=mensagens, model=modelo, max_tokens=3000).choices[0].message.content
 
 def exportar_conversa(historico):
     if not historico: return None
@@ -146,25 +137,25 @@ def exportar_conversa(historico):
     os.makedirs(pasta, exist_ok=True)
     cam_word = f"{pasta}/Historico_Chat.docx"
     doc = docx.Document()
-    doc.add_heading('Relatório da Sessão Criativa/Analítica', 0)
+    doc.add_heading('Histórico da Sessão (IA Master)', 0)
     for h_u, h_a in historico:
         user_text = "[Mídia/Arquivo Enviado]" if isinstance(h_u, tuple) else str(h_u)
         doc.add_heading('Você:', level=2)
         doc.add_paragraph(user_text)
-        doc.add_heading('Assistente IA:', level=2)
+        doc.add_heading('Inteligência Artificial:', level=2)
         doc.add_paragraph(str(h_a))
     doc.save(cam_word)
     return cam_word
 
 # ==========================================
-# 5. PROCESSADOR DE DOCUMENTOS LARGOS
+# 5. DOSSIÊ (PROCESSAMENTO EM LOTE)
 # ==========================================
 def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progresso=gr.Progress()):
     if not instrucao: return "⚠️ Faltou instrução", None, None, "", ""
     t_inicio = time.time()
     palavras = 0
     try:
-        progresso(0.1, desc="Iniciando Processamento...")
+        progresso(0.1, desc="Processando...")
         pasta = f"{DIR_CASOS}/Projeto_{datetime.now().strftime('%d_%m_%Y__%Hh%M')}"
         os.makedirs(pasta, exist_ok=True)
         banco = Chroma(persist_directory=DIR_CHROMA, embedding_function=embeddings)
@@ -177,25 +168,24 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
                 palavras += len(txt.split())
                 banco.add_texts([f"[FONTE: {os.path.basename(arq.name)}]\n{c}" for c in fatiador.split_text(txt)])
             
-        progresso(0.5, desc="Cruzando dados com a IA...")
+        progresso(0.5, desc="Cruzando dados...")
         contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
-        regra_imagem = "\nNo final do documento, pule uma linha e escreva: [IMAGEM: descreva em INGLÊS uma cena fotorrealista relacionada a este conteúdo]" if usar_img else ""
+        regra_imagem = "\nNo final, pule uma linha e escreva: [IMAGEM: descreva em INGLÊS uma cena fotorrealista para este conteúdo]" if usar_img else ""
         prompt = f"Você é um Especialista de Inteligência Sênior. Cite as fontes lidas entre colchetes. {regra_imagem}\nDADOS: {contexto}\nAÇÃO: {instrucao}"
         
         resposta = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ, max_tokens=4000).choices[0].message.content
         
         cam_img = None
         if usar_img:
-            progresso(0.8, desc="Gerando Arte Ilustrativa...")
+            progresso(0.8, desc="Gerando Arte...")
             match = re.search(r'\[IMAGEM:\s*(.*?)\]', resposta, re.IGNORECASE)
             resposta_limpa = re.sub(r'\[IMAGEM:\s*(.*?)\]', '', resposta, flags=re.IGNORECASE).strip()
-            prompt_img = match.group(1).strip() if match else "High quality professional business illustration"
+            prompt_img = match.group(1).strip() if match else "Minimalist corporate presentation cover, ultra high resolution"
             cam_img = f"{pasta}/Capa_Projeto.jpg"
             cliente_hf.text_to_image(prompt_img, model="black-forest-labs/FLUX.1-schnell").save(cam_img)
-        else:
-            resposta_limpa = resposta
+        else: resposta_limpa = resposta
 
-        progresso(0.9, desc="Exportando Relatório...")
+        progresso(0.9, desc="Finalizando...")
         cam_word = f"{pasta}/Documento_Final.docx"
         doc = docx.Document()
         doc.add_heading('Relatório Executivo Oficial', 0)
@@ -204,33 +194,71 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
         doc.save(cam_word)
         
         progresso(1.0, desc="Pronto!")
-        return "✅ Concluído", cam_word, falar_laudo(resposta_limpa[:1000], pasta) if usar_aud else None, resposta_limpa, f"📊 STATUS: {palavras} palavras processadas."
+        cam_audio = f"{pasta}/Resumo.mp3"
+        if usar_aud:
+            with open(f"{pasta}/temp.txt", "w", encoding="utf-8") as f: f.write(resposta_limpa[:3000].replace('*', ''))
+            os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "{pasta}/temp.txt" --write-media "{cam_audio}"')
+        
+        return "✅ Concluído", cam_word, cam_audio if usar_aud else None, resposta_limpa, f"📊 STATUS: {palavras} palavras."
     except Exception as e: return f"Erro: {e}", None, None, "", ""
 
 # ==========================================
-# 6. ESTÚDIO DE CRIAÇÃO (IMAGEM, VÍDEO E ÁUDIO)
+# 6. MESA DO DIRETOR (TRADUÇÃO BLINDADA)
 # ==========================================
-def gerar_imagem_estudio(p):
-    if not p: return None
+def aprimorar_prompt(sujeito, fundo, estilo_ou_movimento, tipo="imagem"):
+    if not sujeito: return None
+    
+    if tipo == "imagem":
+        instrucao = f"""O usuário enviou instruções em PORTUGUÊS DO BRASIL. 
+        Sujeito: {sujeito}
+        Cenário/Fundo: {fundo}
+        Estilo Visual: {estilo_ou_movimento}
+        TAREFA: Traduza fielmente para o INGLÊS. NÃO OMITA NENHUM DETALHE do que foi pedido. Adicione termos técnicos de fotografia (8k, photorealistic, highly detailed, cinematic lighting) para maximizar o realismo. 
+        REGRA: Responda APENAS com o texto final em inglês, sem aspas, sem introduções."""
+    else:
+        instrucao = f"""O usuário enviou instruções para um VÍDEO em PORTUGUÊS DO BRASIL. 
+        Ação/Sujeito: {sujeito}
+        Cenário/Fundo: {fundo}
+        Movimento de Câmera: {estilo_ou_movimento}
+        TAREFA: Traduza fielmente para o INGLÊS. NÃO OMITA A AÇÃO EXATA.
+        REGRA CRÍTICA: Modelos de vídeo suportam poucos caracteres. Resuma a tradução para o MÁXIMO DE 40 PALAVRAS. Adicione (high quality, 60fps, sharp focus). Responda APENAS com o texto em inglês."""
+        
+    try:
+        # A temperatura 0.1 impede que a IA alucine ou fuja da regra de tradução exata
+        resposta = cliente_groq.chat.completions.create(
+            messages=[{"role": "user", "content": instrucao}], 
+            model=MODELO_GROQ,
+            temperature=0.1
+        ).choices[0].message.content.strip()
+        
+        # Limpa caso a IA teime em colocar "Here is the prompt:"
+        if ":" in resposta and len(resposta.split(":")[0]) < 20:
+            resposta = resposta.split(":", 1)[-1].strip()
+        return resposta.replace('"', '')
+    except: 
+        return f"{sujeito}, background {fundo}, {estilo_ou_movimento}"
+
+def gerar_imagem_estudio(sujeito, fundo, estilo):
+    if not sujeito: return None
     c = f"{DIR_MIDIA}/Img_{datetime.now().strftime('%H%M%S')}.jpg"
-    try: p_eng = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": f"Translate this to English (return only the translation): {p}"}], model=MODELO_GROQ).choices[0].message.content.replace('"', '').strip()
-    except: p_eng = p
-    cliente_hf.text_to_image(p_eng, model="black-forest-labs/FLUX.1-schnell").save(c)
+    prompt_mestre = aprimorar_prompt(sujeito, fundo, estilo, "imagem")
+    cliente_hf.text_to_image(prompt_mestre, model="black-forest-labs/FLUX.1-schnell").save(c)
     return c
 
-def gerar_video_ia(prompt):
-    if not prompt: return None, "⚠️ Digite uma cena."
-    try:
-        # Traduz o roteiro para inglês (melhor precisão no vídeo)
-        p_eng = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": f"Translate this scene to English (only translation): {prompt}"}], model=MODELO_GROQ).choices[0].message.content.strip()
-        
-        # Túnel de API para o supercomputador público da Hugging Face (Text-to-Video)
-        cliente_video = Client("multimodalart/zeroscope-v2")
-        resultado = cliente_video.predict(p_eng, api_name="/infer")
-        
-        return resultado, "✅ Vídeo HD gerado com sucesso!"
-    except Exception as e:
-        return None, f"⚠️ Os supercomputadores públicos de vídeo estão lotados no momento. Tente novamente em alguns minutos."
+def gerar_video_ia(imagem_base, sujeito, fundo, movimento):
+    if imagem_base:
+        try:
+            cliente_i2v = Client("multimodalart/stable-video-diffusion")
+            resultado = cliente_i2v.predict(imagem_base, api_name="/video")
+            return resultado, "✅ Imagem animada com sucesso (Física Aplicada)!"
+        except Exception as e: return None, f"⚠️ Servidores de imagem-para-vídeo lotados."
+    else:
+        if not sujeito: return None, "⚠️ Preencha a Ação ou envie uma Imagem Base."
+        try:
+            prompt_mestre = aprimorar_prompt(sujeito, fundo, movimento, "vídeo")
+            cliente_video = Client("multimodalart/zeroscope-v2")
+            return cliente_video.predict(prompt_mestre, api_name="/infer"), "✅ Vídeo gerado a partir do texto!"
+        except Exception as e: return None, f"⚠️ Servidores públicos lotados. Tente em instantes."
 
 def falar_laudo_estudio(texto):
     if not texto: return None
@@ -248,94 +276,109 @@ def gerar_backup():
     return cam, "📦 Backup Pronto"
 
 # ==========================================
-# 7. INTERFACE UNIVERSAL & TABS
+# 7. DESIGN SYSTEM ULTRAMODERNO
 # ==========================================
-tema_chatgpt = gr.themes.Default(primary_hue="zinc", secondary_hue="zinc", neutral_hue="zinc", font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"])
-css_min = "footer {display: none !important;} .gradio-container {border-top: none; max-width: 1200px !important;} .box-painel {border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; background-color: #ffffff;}"
+tema_ultra = gr.themes.Soft(
+    primary_hue="zinc", secondary_hue="slate", neutral_hue="zinc",
+    font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"], radius_size=gr.themes.sizes.radius_lg,
+).set(
+    body_background_fill="#FFFFFF", body_background_fill_dark="#212121",
+    block_background_fill="#F9F9F9", block_background_fill_dark="#2F2F2F",
+    border_color_primary="#E5E5E5", border_color_primary_dark="#424242",
+    block_border_width="1px", button_primary_background_fill="#10A37F",
+    button_primary_background_fill_dark="#10A37F", button_primary_text_color="#FFFFFF"
+)
 
-with gr.Blocks(title="Central de Inteligência", theme=tema_chatgpt, css=css_min) as interface:
-    gr.Markdown("# 🧠 Central de Inteligência Master")
-    gr.Markdown("*Plataforma Universal de Criação, Marketing e Análise Estratégica.*")
+css_ultra = "footer {display: none !important;} .gradio-container {max-width: 1050px !important; margin: auto !important;} .tabs {border: none !important;} .tab-nav {border-bottom: 1px solid var(--border-color-primary) !important; justify-content: center !important; font-size: 1.1em !important; margin-bottom: 20px;} .box-painel {border-radius: 12px; padding: 24px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid var(--border-color-primary);} .dark .box-painel {box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);} .chat-container {border-radius: 12px; overflow: hidden;}"
 
+with gr.Blocks(title="Central Master", theme=tema_ultra, css=css_ultra) as interface:
     with gr.Tabs():
         
-        with gr.TabItem("💬 Assistente Universal (Chat)"):
-            with gr.Row():
-                btn_exportar = gr.Button("💾 Salvar Roteiro/Conversa (Word)", variant="secondary")
-                arq_exportado = gr.File(label="Seu Histórico")
+        # ABA 1: CHAT PRINCIPAL
+        with gr.TabItem("💬 IA Master"):
+            with gr.Accordion("⚙️ Configurações da Conversa", open=False):
+                with gr.Row():
+                    persona_box = gr.Dropdown(choices=["Especialista de Inteligência (Padrão)", "Copywriter Estratégico (Vendas/Ads)", "Consultor de Negócios", "Auditor de Dados", "Diretor de Arte (Design)"], value="Especialista de Inteligência (Padrão)", label="Especialidade", scale=3)
+                    net_box = gr.Checkbox(label="🌐 Conectar à Internet", value=False, scale=1)
+                    btn_exportar = gr.Button("💾 Baixar Word", variant="secondary", scale=1)
             chat = gr.ChatInterface(
                 fn=responder_chat_multimodal, multimodal=True,
-                additional_inputs=[
-                    gr.Dropdown(choices=["Assistente Universal (Padrão)", "Especialista em Marketing & Copywriting (TikTok, Shopee, Ads)", "Consultor de Negócios & Estratégia", "Auditor Financeiro", "Revisor Jurídico"], value="Assistente Universal (Padrão)", label="🎭 Especialidade da IA"),
-                    gr.Checkbox(label="🌐 Permitir Busca na Internet", value=False)
-                ],
-                chatbot=gr.Chatbot(height=600, placeholder="Peça um roteiro de vídeo, anexe planilhas, imagens ou pesquise na Web..."),
-                textbox=gr.Textbox(placeholder="Digite sua ideia ou arraste arquivos...", container=False, scale=7)
+                additional_inputs=[persona_box, net_box],
+                chatbot=gr.Chatbot(height=650, placeholder="Como posso ajudar no seu projeto hoje?"),
+                textbox=gr.Textbox(placeholder="Mensagem para a IA...", container=False, scale=7), theme="soft"
             )
-            btn_exportar.click(fn=exportar_conversa, inputs=[chat.chatbot], outputs=[arq_exportado])
+            arq_exportado = gr.File(label="Histórico", visible=False)
+            btn_exportar.click(fn=exportar_conversa, inputs=[chat.chatbot], outputs=[arq_exportado]).then(lambda: gr.update(visible=True), None, arq_exportado)
 
-        with gr.TabItem("🔎 Processador de Documentos"):
+        # ABA 2: LEITURA DE LOTE
+        with gr.TabItem("📑 Processador de Lote"):
             with gr.Row():
                 with gr.Column(scale=4, elem_classes="box-painel"):
-                    arq_up = gr.File(label="Lote de Documentos (PDF, Excel, Word)", file_count="multiple")
-                    txt_ordem = gr.Textbox(label="Instrução Estratégica", lines=3, placeholder="Ex: Crie um resumo executivo deste material...")
+                    arq_up = gr.File(label="Lote de Documentos", file_count="multiple")
+                    txt_ordem = gr.Textbox(label="Instrução", lines=3)
                     with gr.Row():
                         c_img = gr.Checkbox(label="🖼️ Capa", value=False)
                         c_aud = gr.Checkbox(label="🔊 Áudio", value=False)
                         c_trib = gr.Checkbox(label="⚖️ Debate", value=False)
-                    btn_exe = gr.Button("Processar Lote", variant="primary", size="lg")
-                    btn_limpa = gr.Button("Limpar Memória Atual", variant="secondary")
+                    btn_exe = gr.Button("Processar", variant="primary", size="lg")
+                    btn_limpa = gr.Button("Limpar Memória", variant="secondary")
                     msg_sys = gr.Textbox(show_label=False, interactive=False)
                     btn_limpa.click(fn=limpar_banco_de_dados, outputs=msg_sys)
                 with gr.Column(scale=6):
-                    out_tela = gr.Textbox(label="Visualização do Relatório", lines=20, interactive=False)
+                    out_tela = gr.Textbox(label="Documento Gerado", lines=22, interactive=False)
                     with gr.Row():
-                        out_word = gr.File(label="Baixar Documento Final")
-                        out_aud = gr.Audio(label="Ouvir Resumo")
+                        out_word = gr.File(label="Baixar Final")
+                        out_aud = gr.Audio(label="Ouvir")
                     out_tel = gr.Textbox(show_label=False, lines=1, interactive=False)
             btn_exe.click(fn=gerar_dossie, inputs=[arq_up, txt_ordem, c_img, c_aud, c_trib], outputs=[msg_sys, out_word, out_aud, out_tela, out_tel])
 
-        with gr.TabItem("🎨 Estúdio de Criação (Mídias)"):
-            gr.Markdown("### Geração de Mídia Avançada para Anúncios")
-            
+        # ABA 3: MESA DO DIRETOR (NOVA)
+        with gr.TabItem("🎬 Mesa de Direção (Estúdio)"):
             with gr.Row():
                 with gr.Column(elem_classes="box-painel"):
-                    gr.Markdown("**🖼️ Criar Imagem (FLUX.1)**")
-                    txt_img = gr.Textbox(show_label=False, placeholder="Descreva o produto, cenário ou identidade visual...", lines=2)
-                    btn_gerar_img = gr.Button("Gerar Arte / Imagem", variant="primary")
-                    out_img = gr.Image(label="Resultado da IA", type="filepath")
-                    btn_gerar_img.click(fn=gerar_imagem_estudio, inputs=[txt_img], outputs=[out_img])
+                    gr.Markdown("### 🖼️ Fotografia (FLUX.1 + Prompt IA)")
+                    img_sujeito = gr.Textbox(label="1. Foco Principal (Detalhe o que você quer)", placeholder="Ex: Uma garrafa térmica preta, textura fosca, tampa prateada...")
+                    img_fundo = gr.Textbox(label="2. Cenário / Fundo", placeholder="Ex: Em uma mesa de carvalho escuro, ambiente de escritório moderno, luz solar pela janela...")
+                    img_estilo = gr.Dropdown(choices=["Fotorrealista (Cinematic 8k)", "Ilustração 3D (Pixar/Disney)", "Cyberpunk Neon", "Minimalista Clean", "Pintura a Óleo", "Vintage/Retrô"], label="3. Estilo Visual", value="Fotorrealista (Cinematic 8k)")
+                    btn_gerar_img = gr.Button("Disparar Câmera", variant="primary")
+                    out_img = gr.Image(label="Resultado", type="filepath")
+                    btn_gerar_img.click(fn=gerar_imagem_estudio, inputs=[img_sujeito, img_fundo, img_estilo], outputs=[out_img])
 
                 with gr.Column(elem_classes="box-painel"):
-                    gr.Markdown("**🎬 Criar Vídeo HD (Túnel IA)**")
-                    txt_vid = gr.Textbox(show_label=False, placeholder="Descreva a cena animada que deseja gerar...", lines=2)
-                    btn_gerar_vid = gr.Button("Gerar Vídeo", variant="primary")
-                    out_vid = gr.Video(label="Vídeo Final (MP4)")
+                    gr.Markdown("### 🎥 Set de Filmagem (Vídeo HD)")
+                    vid_base = gr.Image(label="Opção A: Animar Foto (Ignora textos)", type="filepath")
+                    gr.Markdown("*Ou crie uma cena em movimento do zero:*")
+                    vid_acao = gr.Textbox(label="Opção B: Ação / Cena (Seja direto e claro)", placeholder="Ex: Um carro esportivo vermelho derrapando na curva...")
+                    vid_fundo = gr.Textbox(label="Cenário", placeholder="Ex: Rodovia à noite chuvosa...")
+                    vid_mov = gr.Dropdown(choices=["Câmera Fixa", "Zoom In Lento (Aproximar)", "Zoom Out Lento (Afastar)", "Pan para Esquerda", "Pan para Direita", "Estilo Drone (Aéreo)"], label="Movimento de Câmera", value="Zoom In Lento (Aproximar)")
+                    btn_gerar_vid = gr.Button("Gravar Vídeo", variant="primary")
+                    out_vid = gr.Video(label="Resultado (MP4)")
                     msg_vid = gr.Textbox(show_label=False, interactive=False)
-                    btn_gerar_vid.click(fn=gerar_video_ia, inputs=[txt_vid], outputs=[out_vid, msg_vid])
+                    btn_gerar_vid.click(fn=gerar_video_ia, inputs=[vid_base, vid_acao, vid_fundo, vid_mov], outputs=[out_vid, msg_vid])
             
             with gr.Row():
                 with gr.Column(elem_classes="box-painel"):
-                    gr.Markdown("**🔊 Locução Sintética (Voz)**")
-                    txt_aud = gr.Textbox(show_label=False, placeholder="Cole o roteiro do TikTok/Shopee aqui para gerar a voz profissional...", lines=2)
-                    btn_gerar_aud = gr.Button("Gerar Locução", variant="primary")
-                    out_aud_estudio = gr.Audio(label="Áudio Pronto")
+                    gr.Markdown("### 🎙️ Estúdio de Dublagem")
+                    txt_aud = gr.Textbox(show_label=False, placeholder="Cole o roteiro em Português aqui para a locução neural de estúdio...", lines=2)
+                    btn_gerar_aud = gr.Button("Sintetizar Voz", variant="primary")
+                    out_aud_estudio = gr.Audio(label="Locução Pronta")
                     btn_gerar_aud.click(fn=falar_laudo_estudio, inputs=[txt_aud], outputs=[out_aud_estudio])
 
-        with gr.TabItem("🗄️ Meus Arquivos & Backup"):
+        # ABA 4: BACKUP
+        with gr.TabItem("🗄️ Arquivos & Backup"):
             with gr.Row():
                 with gr.Column(elem_classes="box-painel"):
-                    btn_lista = gr.Button("Atualizar Lista de Mídias")
-                    galeria = gr.File(label="Todos os arquivos gerados nesta sessão", file_count="multiple", interactive=False)
+                    btn_lista = gr.Button("Listar Sessão Atual")
+                    galeria = gr.File(label="Todos os arquivos gerados", file_count="multiple", interactive=False)
                     btn_lista.click(fn=listar_arquivos_mortos, outputs=galeria)
                 with gr.Column(elem_classes="box-painel"):
-                    btn_back = gr.Button("Exportar Backup de Segurança (ZIP)", variant="primary")
+                    btn_back = gr.Button("Exportar Cofre (ZIP)", variant="primary")
                     msg_b = gr.Textbox(show_label=False)
-                    arq_b = gr.File(label="Download do ZIP")
+                    arq_b = gr.File(label="Download ZIP")
                     btn_back.click(fn=gerar_backup, outputs=[arq_b, msg_b])
 
 # ==========================================
-# 8. ACESSOS SEGUROS NO COFRE
+# 8. ACESSOS NO COFRE
 # ==========================================
 lista_de_usuarios = []
 for i in ["", "_1", "_2", "_3"]:
