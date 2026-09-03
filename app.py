@@ -286,12 +286,6 @@ tema_ultra = gr.themes.Base(
     block_label_text_color_dark="#D4AF37",
     block_title_text_color="#D4AF37",
     block_title_text_color_dark="#D4AF37",
-    input_background_fill="#141414",
-    input_background_fill_dark="#141414",
-    input_border_color="#444444",
-    input_border_color_dark="#444444",
-    input_text_color="#FFFFFF",
-    input_text_color_dark="#FFFFFF",
     button_primary_background_fill="linear-gradient(145deg, #D4AF37, #AA7C11)",
     button_primary_background_fill_dark="linear-gradient(145deg, #D4AF37, #AA7C11)",
     button_primary_text_color="#000000",
@@ -305,7 +299,16 @@ body, .gradio-container { background-color: #050505 !important; color: #FFFFFF !
 footer { display: none !important; }
 span, p, label, h1, h2, h3, h4, .markdown-text, .chatbot { color: #F3F4F6 !important; }
 h3 { color: #D4AF37 !important; }
-textarea, input, select, .wrap-inner, .dropdown-menu, .wrap { background-color: #111111 !important; color: #FFFFFF !important; border: 1px solid #333333 !important; border-radius: 12px !important; }
+
+/* Legibilidade forçada para inputs e caixas de texto */
+textarea, input, select, .wrap-inner, .dropdown-menu, .wrap { 
+    background-color: #111111 !important; 
+    color: #FFFFFF !important; 
+    border: 1px solid #444444 !important; 
+    border-radius: 12px !important; 
+}
+.label-wrap span { color: #CCCCCC !important; }
+
 button { text-transform: uppercase; font-weight: 700 !important; letter-spacing: 1px; transition: 0.3s all ease !important; border-radius: 12px !important; color: #FFFFFF !important; }
 button:hover { transform: translateY(-2px); }
 button.primary { color: #000000 !important; border: none !important; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important; text-shadow: none !important; }
