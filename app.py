@@ -16,6 +16,7 @@ from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_chroma import Chroma
 from huggingface_hub import InferenceClient
 from duckduckgo_search import DDGS
+from gradio_client import Client  # O Túnel para processamento de Vídeo
 
 # ==========================================
 # 1. CHAVES MESTRES E CONEXÕES EM NUVEM
@@ -55,14 +56,12 @@ def listar_arquivos_mortos():
         if os.path.exists(d):
             for root, _, files in os.walk(d):
                 for f in files:
-                    if f.endswith(('.docx', '.pdf', '.mp3', '.jpg')): arquivos.append(os.path.join(root, f))
+                    if f.endswith(('.docx', '.pdf', '.mp3', '.jpg', '.mp4')): arquivos.append(os.path.join(root, f))
     arquivos.sort(key=os.path.getmtime, reverse=True)
     return arquivos
 
-registrar_log("Sistema V8.1 (Universal) Iniciado.")
-
 # ==========================================
-# 3. EXTRAÇÃO E LIMPEZA
+# 3. EXTRAÇÃO DE DADOS
 # ==========================================
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
@@ -87,13 +86,6 @@ def extrair_texto(arquivo):
                 texto = f"[TRANSCRIÇÃO]: {cliente_groq.audio.transcriptions.create(file=(caminho, file.read()), model='whisper-large-v3').text}\n"
         return texto
     except: return ""
-
-def falar_laudo(texto_laudo, pasta_destino=DIR_MIDIA):
-    if not texto_laudo: return None
-    cam_txt, cam_audio = f"{pasta_destino}/temp.txt", f"{pasta_destino}/Audio_{datetime.now().strftime('%H%M%S')}.mp3"
-    with open(cam_txt, "w", encoding="utf-8") as f: f.write(texto_laudo[:3000].replace('*', ''))
-    os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "{cam_txt}" --write-media "{cam_audio}"')
-    return cam_audio
 
 def limpar_banco_de_dados():
     try:
@@ -187,7 +179,6 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
             
         progresso(0.5, desc="Cruzando dados com a IA...")
         contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
-        
         regra_imagem = "\nNo final do documento, pule uma linha e escreva: [IMAGEM: descreva em INGLÊS uma cena fotorrealista relacionada a este conteúdo]" if usar_img else ""
         prompt = f"Você é um Especialista de Inteligência Sênior. Cite as fontes lidas entre colchetes. {regra_imagem}\nDADOS: {contexto}\nAÇÃO: {instrucao}"
         
@@ -213,20 +204,40 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
         doc.save(cam_word)
         
         progresso(1.0, desc="Pronto!")
-        return "✅ Concluído", cam_word, falar_laudo("Resumo: " + resposta_limpa[:1000], pasta) if usar_aud else None, resposta_limpa, f"📊 STATUS: {palavras} palavras processadas."
+        return "✅ Concluído", cam_word, falar_laudo(resposta_limpa[:1000], pasta) if usar_aud else None, resposta_limpa, f"📊 STATUS: {palavras} palavras processadas."
     except Exception as e: return f"Erro: {e}", None, None, "", ""
 
 # ==========================================
-# 6. ESTÚDIO DE CRIAÇÃO (VÍDEOS/TIKTOK)
+# 6. ESTÚDIO DE CRIAÇÃO (IMAGEM, VÍDEO E ÁUDIO)
 # ==========================================
 def gerar_imagem_estudio(p):
     if not p: return None
-    c = f"{DIR_MIDIA}/Criacao_{datetime.now().strftime('%H%M%S')}.jpg"
-    try: 
-        p_eng = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": f"Translate this scene to English (return only the translation): {p}"}], model=MODELO_GROQ).choices[0].message.content.replace('"', '').strip()
+    c = f"{DIR_MIDIA}/Img_{datetime.now().strftime('%H%M%S')}.jpg"
+    try: p_eng = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": f"Translate this to English (return only the translation): {p}"}], model=MODELO_GROQ).choices[0].message.content.replace('"', '').strip()
     except: p_eng = p
     cliente_hf.text_to_image(p_eng, model="black-forest-labs/FLUX.1-schnell").save(c)
     return c
+
+def gerar_video_ia(prompt):
+    if not prompt: return None, "⚠️ Digite uma cena."
+    try:
+        # Traduz o roteiro para inglês (melhor precisão no vídeo)
+        p_eng = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": f"Translate this scene to English (only translation): {prompt}"}], model=MODELO_GROQ).choices[0].message.content.strip()
+        
+        # Túnel de API para o supercomputador público da Hugging Face (Text-to-Video)
+        cliente_video = Client("multimodalart/zeroscope-v2")
+        resultado = cliente_video.predict(p_eng, api_name="/infer")
+        
+        return resultado, "✅ Vídeo HD gerado com sucesso!"
+    except Exception as e:
+        return None, f"⚠️ Os supercomputadores públicos de vídeo estão lotados no momento. Tente novamente em alguns minutos."
+
+def falar_laudo_estudio(texto):
+    if not texto: return None
+    cam_txt, cam_audio = f"{DIR_MIDIA}/temp.txt", f"{DIR_MIDIA}/Voz_{datetime.now().strftime('%H%M%S')}.mp3"
+    with open(cam_txt, "w", encoding="utf-8") as f: f.write(texto[:3000].replace('*', ''))
+    os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "{cam_txt}" --write-media "{cam_audio}"')
+    return cam_audio
 
 def gerar_backup():
     cam = "./Backup_Projetos.zip"
@@ -255,21 +266,11 @@ with gr.Blocks(title="Central de Inteligência", theme=tema_chatgpt, css=css_min
             chat = gr.ChatInterface(
                 fn=responder_chat_multimodal, multimodal=True,
                 additional_inputs=[
-                    gr.Dropdown(
-                        choices=[
-                            "Assistente Universal (Padrão)", 
-                            "Especialista em Marketing & Copywriting (TikTok, Shopee, Ads)", 
-                            "Consultor de Negócios & Estratégia", 
-                            "Auditor Financeiro & Analista de Dados", 
-                            "Revisor Jurídico & Perito"
-                        ], 
-                        value="Assistente Universal (Padrão)", 
-                        label="🎭 Escolha a Especialidade da IA"
-                    ),
-                    gr.Checkbox(label="🌐 Permitir Busca na Internet (Dados em tempo real)", value=False)
+                    gr.Dropdown(choices=["Assistente Universal (Padrão)", "Especialista em Marketing & Copywriting (TikTok, Shopee, Ads)", "Consultor de Negócios & Estratégia", "Auditor Financeiro", "Revisor Jurídico"], value="Assistente Universal (Padrão)", label="🎭 Especialidade da IA"),
+                    gr.Checkbox(label="🌐 Permitir Busca na Internet", value=False)
                 ],
-                chatbot=gr.Chatbot(height=600, placeholder="Peça um roteiro de vídeo, anexe uma planilha, envie imagens para análise ou faça uma pesquisa na Web..."),
-                textbox=gr.Textbox(placeholder="Digite sua ideia, arraste arquivos ou cole imagens...", container=False, scale=7)
+                chatbot=gr.Chatbot(height=600, placeholder="Peça um roteiro de vídeo, anexe planilhas, imagens ou pesquise na Web..."),
+                textbox=gr.Textbox(placeholder="Digite sua ideia ou arraste arquivos...", container=False, scale=7)
             )
             btn_exportar.click(fn=exportar_conversa, inputs=[chat.chatbot], outputs=[arq_exportado])
 
@@ -277,15 +278,12 @@ with gr.Blocks(title="Central de Inteligência", theme=tema_chatgpt, css=css_min
             with gr.Row():
                 with gr.Column(scale=4, elem_classes="box-painel"):
                     arq_up = gr.File(label="Lote de Documentos (PDF, Excel, Word)", file_count="multiple")
+                    txt_ordem = gr.Textbox(label="Instrução Estratégica", lines=3, placeholder="Ex: Crie um resumo executivo deste material...")
                     with gr.Row():
-                        mic = gr.Audio(sources=["microphone"], type="filepath", label="Gravar Instrução")
-                        txt_ordem = gr.Textbox(show_label=False, lines=4, placeholder="Ex: Crie um resumo executivo deste material...")
-                    mic.stop_recording(fn=ouvir_microfone, inputs=mic, outputs=txt_ordem)
-                    with gr.Row():
-                        c_img = gr.Checkbox(label="🖼️ Gerar Imagem de Capa", value=False)
-                        c_aud = gr.Checkbox(label="🔊 Gerar Resumo em Áudio", value=False)
-                        c_trib = gr.Checkbox(label="⚖️ Analisar Contradições", value=False)
-                    btn_exe = gr.Button("Processar e Gerar Documento", variant="primary", size="lg")
+                        c_img = gr.Checkbox(label="🖼️ Capa", value=False)
+                        c_aud = gr.Checkbox(label="🔊 Áudio", value=False)
+                        c_trib = gr.Checkbox(label="⚖️ Debate", value=False)
+                    btn_exe = gr.Button("Processar Lote", variant="primary", size="lg")
                     btn_limpa = gr.Button("Limpar Memória Atual", variant="secondary")
                     msg_sys = gr.Textbox(show_label=False, interactive=False)
                     btn_limpa.click(fn=limpar_banco_de_dados, outputs=msg_sys)
@@ -298,20 +296,31 @@ with gr.Blocks(title="Central de Inteligência", theme=tema_chatgpt, css=css_min
             btn_exe.click(fn=gerar_dossie, inputs=[arq_up, txt_ordem, c_img, c_aud, c_trib], outputs=[msg_sys, out_word, out_aud, out_tela, out_tel])
 
         with gr.TabItem("🎨 Estúdio de Criação (Mídias)"):
-            gr.Markdown("### Geração de Mídia para Redes Sociais, Anúncios e Campanhas")
+            gr.Markdown("### Geração de Mídia Avançada para Anúncios")
+            
             with gr.Row():
                 with gr.Column(elem_classes="box-painel"):
-                    gr.Markdown("**Criar Imagem Profissional (IA FLUX.1)**")
-                    txt_img = gr.Textbox(label="Descreva o que deseja criar (ex: Foto realista de um produto):", lines=3)
+                    gr.Markdown("**🖼️ Criar Imagem (FLUX.1)**")
+                    txt_img = gr.Textbox(show_label=False, placeholder="Descreva o produto, cenário ou identidade visual...", lines=2)
                     btn_gerar_img = gr.Button("Gerar Arte / Imagem", variant="primary")
                     out_img = gr.Image(label="Resultado da IA", type="filepath")
                     btn_gerar_img.click(fn=gerar_imagem_estudio, inputs=[txt_img], outputs=[out_img])
+
                 with gr.Column(elem_classes="box-painel"):
-                    gr.Markdown("**Criar Locução Sintética (Edge-TTS)**")
-                    txt_aud = gr.Textbox(label="Cole o roteiro do TikTok/Shopee aqui para gerar a voz:", lines=3)
+                    gr.Markdown("**🎬 Criar Vídeo HD (Túnel IA)**")
+                    txt_vid = gr.Textbox(show_label=False, placeholder="Descreva a cena animada que deseja gerar...", lines=2)
+                    btn_gerar_vid = gr.Button("Gerar Vídeo", variant="primary")
+                    out_vid = gr.Video(label="Vídeo Final (MP4)")
+                    msg_vid = gr.Textbox(show_label=False, interactive=False)
+                    btn_gerar_vid.click(fn=gerar_video_ia, inputs=[txt_vid], outputs=[out_vid, msg_vid])
+            
+            with gr.Row():
+                with gr.Column(elem_classes="box-painel"):
+                    gr.Markdown("**🔊 Locução Sintética (Voz)**")
+                    txt_aud = gr.Textbox(show_label=False, placeholder="Cole o roteiro do TikTok/Shopee aqui para gerar a voz profissional...", lines=2)
                     btn_gerar_aud = gr.Button("Gerar Locução", variant="primary")
                     out_aud_estudio = gr.Audio(label="Áudio Pronto")
-                    btn_gerar_aud.click(fn=falar_laudo, inputs=[txt_aud], outputs=[out_aud_estudio])
+                    btn_gerar_aud.click(fn=falar_laudo_estudio, inputs=[txt_aud], outputs=[out_aud_estudio])
 
         with gr.TabItem("🗄️ Meus Arquivos & Backup"):
             with gr.Row():
