@@ -19,7 +19,7 @@ from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_chroma import Chroma
 from duckduckgo_search import DDGS
 from gradio_client import Client
-from huggingface_hub import InferenceClient # A IMPORTAÇÃO QUE ESTAVA FALTANDO!
+from huggingface_hub import InferenceClient
 
 # ==========================================
 # 1. CHAVES MESTRES E CONEXÕES
@@ -250,7 +250,6 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
     # ==========================================
     anexos_html = ""
     
-    # Gatilho 1: Nova Imagem
     match_img = re.search(r'\[AÇÃO_IMAGEM:\s*(.*?)(?:\|\s*(\w+))?\]', resposta_acumulada)
     if match_img:
         prompt_i = match_img.group(1).strip()
@@ -261,7 +260,6 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
             b64_img = encode_file_b64(cam_gerada)
             anexos_html += f"\n\n**🖼️ Imagem Gerada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:18px; margin-top:8px; box-shadow:0 8px 20px rgba(0,0,0,0.15);' />\n"
 
-    # Gatilho 2: Editar Imagem Enviada
     match_edit = re.search(r'\[AÇÃO_EDITAR_IMAGEM:\s*(.*?)\]', resposta_acumulada)
     if match_edit and imagens_anexadas:
         prompt_e = match_edit.group(1).strip()
@@ -273,7 +271,6 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
         else:
             anexos_html += "\n\n*(⚠️ Ocorreu um erro ao editar a imagem nos servidores públicos. Tente novamente em alguns segundos.)*"
 
-    # Gatilho 3: Áudio
     match_aud = re.search(r'\[AÇÃO_AUDIO:\s*(.*?)\]', resposta_acumulada)
     if match_aud:
         texto_loc = match_aud.group(1).strip()
@@ -283,7 +280,6 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
             b64_aud = encode_file_b64(cam_aud)
             anexos_html += f"\n\n**🔊 Locução Pronta:**\n<audio controls src='data:audio/mp3;base64,{b64_aud}' style='width:100%; margin-top:8px;'></audio>\n"
 
-    # Gatilho 4: Vídeo
     match_vid = re.search(r'\[AÇÃO_VIDEO:\s*(.*?)\]', resposta_acumulada)
     if match_vid:
         prompt_v = match_vid.group(1).strip()
@@ -294,11 +290,9 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
             b64_vid = encode_file_b64(cam_vid)
             anexos_html += f"\n\n**🎥 Vídeo Gerado:**\n<video controls style='max-width:100%; border-radius:18px; margin-top:8px;' src='data:video/mp4;base64,{b64_vid}'></video>\n"
 
-    # Entrega Final
     resposta_final_limpa = re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada).strip() + anexos_html
     yield resposta_final_limpa
 
-    # Auto-Save
     try:
         sessao_alvo = id_sessao if (id_sessao and id_sessao != "Nenhuma conversa salva") else f"Projeto_{datetime.now().strftime('%d%m_%H%M%S')}"
         arq_sessao = f"{DIR_CHATS}/{sessao_alvo}.json"
@@ -377,9 +371,10 @@ PWA_HEAD = """
 <title>Chat Titã</title>
 """
 
+# CORREÇÃO APLICADA: gr.themes.sizes.radius_xxl 
 tema_dola_premium = gr.themes.Soft(
     primary_hue="zinc", secondary_hue="slate", neutral_hue="zinc",
-    font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"], radius_size=gr.themes.sizes.radius_xl,
+    font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"], radius_size=gr.themes.sizes.radius_xxl,
 ).set(
     body_background_fill="#F4F4F5", body_background_fill_dark="#18181B",
     block_background_fill="#FFFFFF", block_background_fill_dark="#27272A",
