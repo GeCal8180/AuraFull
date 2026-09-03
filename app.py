@@ -254,7 +254,7 @@ def gerar_backup():
     return cam, "📦 Backup Pronto"
 
 # ==========================================
-# 7. DESIGN SYSTEM V9.1 (EDITION GOLD)
+# 7. DESIGN SYSTEM V9.3 (AESTHETIC UI)
 # ==========================================
 tema_ultra = gr.themes.Soft(
     primary_hue="zinc", secondary_hue="slate", neutral_hue="zinc",
@@ -282,17 +282,17 @@ footer {display: none !important;}
 
 with gr.Blocks(title="Central Master", theme=tema_ultra, css=css_ultra, fill_width=True) as interface:
     
-    # === MENU LATERAL COM LOGO (CORRIGIDO) ===
+    # === MENU LATERAL COM LOGO ===
     with gr.Sidebar(open=True):
         gr.Image("chamariz-sem-fundo.jpg", show_label=False, container=False)
         gr.Markdown("## 🧠 Central IA\n*Painel de Controle*")
-        gr.Divider()
+        gr.Markdown("---")
         
         gr.Markdown("### ⚙️ Cérebro da IA")
         persona_box = gr.Dropdown(choices=["Especialista de Inteligência (Padrão)", "Copywriter Estratégico (Vendas/Ads)", "Consultor de Negócios", "Auditor de Dados", "Diretor de Arte (Design)"], value="Especialista de Inteligência (Padrão)", label="Especialidade", show_label=False)
         net_box = gr.Checkbox(label="🌐 Permitir Busca na Internet", value=False)
         
-        gr.Divider()
+        gr.Markdown("---")
         gr.Markdown("### 💾 Gestão de Dados")
         btn_exportar = gr.Button("Baixar Conversa (Word)", variant="secondary")
         arq_exportado = gr.File(label="Histórico", visible=False)
@@ -380,5 +380,4 @@ for i in ["", "_1", "_2", "_3"]:
     u, s = os.environ.get(f"LOGIN_USUARIO{i}" if i=="" else f"USUARIO{i}"), os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
     if u and s: lista_de_usuarios.append((u, s))
 
-# A remoção do theme e css do comando final é feita aqui pelo Gradio (ele herda da construção dos Blocks).
 interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_de_usuarios)
