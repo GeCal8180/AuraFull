@@ -31,21 +31,20 @@ chave_openrouter = os.environ.get("OPENROUTER_API_KEY")
 cliente_groq = Groq(api_key=chave_groq)
 cliente_hf = InferenceClient(token=chave_hf)
 
-embeddings = HuggingFaceInferenceAPIEmbeddings(
-    api_key=chave_hf, 
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+# Contingência Global para Embeddings
+try:
+    embeddings = HuggingFaceInferenceAPIEmbeddings(api_key=chave_hf, model_name="sentence-transformers/all-MiniLM-L6-v2")
+except: embeddings = None
 
 # ==========================================
-# 1.5 RADAR DE CÓRTEX (AUTO-DESCOBERTA DE MODELOS)
+# 1.5 RADAR DE CÓRTEX (AUTO-DESCOBERTA)
 # ==========================================
 MODELOS_TEXTO_ATIVOS = []
 MODELOS_VISAO_ATIVOS = []
 
-# O sistema vasculha os servidores da Groq e descobre sozinho quais modelos estão online e permitidos hoje.
 if chave_groq:
     try:
-        resposta_modelos = requests.get("https://api.groq.com/openai/v1/models", headers={"Authorization": f"Bearer {chave_groq}"}).json()
+        resposta_modelos = requests.get("https://api.groq.com/openai/v1/models", headers={"Authorization": f"Bearer {chave_groq}"}, timeout=10).json()
         if "data" in resposta_modelos:
             for m in resposta_modelos["data"]:
                 m_id = m["id"]
@@ -54,12 +53,11 @@ if chave_groq:
                 else: MODELOS_TEXTO_ATIVOS.append(m_id)
     except: pass
 
-# Trava de Segurança caso a API não responda a tempo
 if not MODELOS_TEXTO_ATIVOS: MODELOS_TEXTO_ATIVOS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 if not MODELOS_VISAO_ATIVOS: MODELOS_VISAO_ATIVOS = ["llama-3.2-90b-vision-preview"]
 
 # ==========================================
-# 2. DIRETÓRIOS E BANCO DE DADOS (PERSISTÊNCIA)
+# 2. DIRETÓRIOS E BANCO DE DADOS (TOLERÂNCIA A FALHA ZERO)
 # ==========================================
 DIRETORIO = "./Central_IA_Master"
 DIR_CHROMA = f"{DIRETORIO}/Banco_de_Dados_Vetorial"
@@ -68,14 +66,17 @@ DIR_MIDIA = f"{DIRETORIO}/Midia_Criada"
 DB_PATH = f"{DIRETORIO}/codigo_de_ouro.db"
 
 for d in [DIRETORIO, DIR_CASOS, DIR_MIDIA]:
-    os.makedirs(d, exist_ok=True)
+    try: os.makedirs(d, exist_ok=True)
+    except: pass
 
 def iniciar_banco():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS memoria_sessoes (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT, conteudo TEXT, tipo TEXT)''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS memoria_sessoes (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT, conteudo TEXT, tipo TEXT)''')
+        conn.commit()
+        conn.close()
+    except: pass
 
 iniciar_banco()
 
@@ -91,43 +92,49 @@ def salvar_na_memoria(conteudo, tipo="Geral"):
 def ler_memoria():
     try:
         conn = sqlite3.connect(DB_PATH)
-        df = pd.read_sql_query("SELECT id, data, tipo, substr(conteudo, 1, 60) || '...' as resumo FROM memoria_sessoes ORDER BY id DESC LIMIT 15", conn)
+        df = pd.read_sql_query("SELECT id as 'ID', data as 'DATA', tipo as 'MÓDULO', conteudo as 'REGISTRO DE OPERAÇÃO' FROM memoria_sessoes ORDER BY id DESC LIMIT 20", conn)
         conn.close()
         return df
-    except: return pd.DataFrame()
+    except: return pd.DataFrame(columns=["SISTEMA", "STATUS", "MENSAGEM"], data=[["Caixa Preta", "Operante", "Nenhum registro recuperado."]])
 
 # ==========================================
 # 3. RENDERIZAÇÃO DA LOGO E DESIGN
 # ==========================================
 def buscar_caminho_logo():
-    for root, dirs, files in os.walk("."):
-        for f in files:
-            if "chamariz" in f.lower() and "fundo" in f.lower(): return os.path.join(root, f)
+    try:
+        for root, dirs, files in os.walk("."):
+            for f in files:
+                if "chamariz" in f.lower() and "fundo" in f.lower(): return os.path.join(root, f)
+    except: pass
     return None
 
 def renderizar_logo():
     caminho = buscar_caminho_logo()
     if caminho:
-        extensao = "png" if caminho.lower().endswith(".png") else "jpeg"
-        with open(caminho, "rb") as f:
-            encoded = base64.b64encode(f.read()).decode('utf-8')
-        return f'''<div style="display: flex; justify-content: center; align-items: center; padding: 15px 0 30px 0;"><img src="data:image/{extensao};base64,{encoded}" style="max-width: 75%; filter: drop-shadow(0px 8px 20px rgba(212, 175, 55, 0.4));"></div>'''
+        try:
+            extensao = "png" if caminho.lower().endswith(".png") else "jpeg"
+            with open(caminho, "rb") as f: encoded = base64.b64encode(f.read()).decode('utf-8')
+            return f'''<div style="display: flex; justify-content: center; align-items: center; padding: 15px 0 30px 0;"><img src="data:image/{extensao};base64,{encoded}" style="max-width: 75%; filter: drop-shadow(0px 8px 20px rgba(212, 175, 55, 0.4));"></div>'''
+        except: pass
     return '''<div style="text-align: center; margin-bottom: 30px; padding: 25px 10px; border-radius: 12px; background: linear-gradient(145deg, #BF953F, #B38728); box-shadow: 0 10px 25px rgba(212,175,55,0.2);"><h1 style="color: #000; font-family: 'Outfit', sans-serif; font-weight: 800; letter-spacing: 4px; margin: 0; font-size: 20px;">O CÓDIGO DE OURO</h1></div>'''
 
 def renderizar_logo_login():
     caminho = buscar_caminho_logo()
     if caminho:
-        extensao = "png" if caminho.lower().endswith(".png") else "jpeg"
-        with open(caminho, "rb") as f:
-            encoded = base64.b64encode(f.read()).decode('utf-8')
-        return f'''<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; padding: 10px 0 25px 0;"><img src="data:image/{extensao};base64,{encoded}" style="width: 380px; max-width: 90%; margin: 0 auto 15px auto; display: block; filter: drop-shadow(0px 8px 20px rgba(212, 175, 55, 0.6));"><span style="color: #D4AF37; font-family: 'Outfit', sans-serif; letter-spacing: 5px; font-size: 13px; font-weight: 700; text-transform: uppercase;">Acesso Restrito</span></div>'''
+        try:
+            extensao = "png" if caminho.lower().endswith(".png") else "jpeg"
+            with open(caminho, "rb") as f: encoded = base64.b64encode(f.read()).decode('utf-8')
+            return f'''<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; padding: 10px 0 25px 0;"><img src="data:image/{extensao};base64,{encoded}" style="width: 380px; max-width: 90%; margin: 0 auto 15px auto; display: block; filter: drop-shadow(0px 8px 20px rgba(212, 175, 55, 0.6));"><span style="color: #D4AF37; font-family: 'Outfit', sans-serif; letter-spacing: 5px; font-size: 13px; font-weight: 700; text-transform: uppercase;">Acesso Restrito</span></div>'''
+        except: pass
     return '''<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; padding: 10px 0 25px 0;"><h1 style="color: #D4AF37; font-family: 'Outfit', sans-serif; letter-spacing: 4px; font-size: 26px; margin-bottom: 10px; text-align: center;">O CÓDIGO DE OURO</h1><span style="color: #888; font-family: 'Inter', sans-serif; letter-spacing: 3px; font-size: 12px; font-weight: 600; text-align: center;">ACESSO RESTRITO</span></div>'''
 
 def encode_image(image_path):
-    with open(image_path, "rb") as image_file: return base64.b64encode(image_file.read()).decode('utf-8')
+    try:
+        with open(image_path, "rb") as image_file: return base64.b64encode(image_file.read()).decode('utf-8')
+    except: return ""
 
 # ==========================================
-# 4. MOTOR HÍBRIDO ESTRATÉGICO
+# 4. MOTOR HÍBRIDO ESTRATÉGICO (BLINDAGEM TOTAL)
 # ==========================================
 def motor_neural_groq(mensagens, visao=False, max_tokens=3000):
     modelos_alvo = MODELOS_VISAO_ATIVOS if visao else MODELOS_TEXTO_ATIVOS
@@ -136,18 +143,20 @@ def motor_neural_groq(mensagens, visao=False, max_tokens=3000):
     for mod in modelos_alvo:
         try:
             r = cliente_groq.chat.completions.create(model=mod, messages=mensagens, max_tokens=max_tokens, temperature=0.3)
-            return r.choices[0].message.content
+            if r and r.choices: return r.choices[0].message.content
         except Exception as e: 
-            erros_acumulados.append(f"[{mod} falhou: {str(e)}]")
+            erros_acumulados.append(f"[{mod}: {str(e)[:50]}]")
             continue
             
+    # Sistema Imortal: Retorna erro descritivo no chat em vez de travar a tela
     log_erros = " | ".join(erros_acumulados)
-    raise Exception(f"Acesso Negado (Limites da Groq atingidos ou Chave Inválida). Log: {log_erros}")
+    salvar_na_memoria(f"Falha Geral APIs: {log_erros}", "Sistema Erro")
+    return f"⚠️ [SISTEMA DE CONTINGÊNCIA ATIVADO]: O Córtex Neural encontrou bloqueios em todos os nós externos de processamento. A operação não pôde ser completada no servidor principal. Diagnóstico de bloqueio: {log_erros}"
 
 def chamar_gigante_openrouter(mensagens):
     if not chave_openrouter: return None
     try:
-        r = requests.post("https://openrouter.ai/api/v1/chat/completions", headers={"Authorization": f"Bearer {chave_openrouter}", "Content-Type": "application/json", "HTTP-Referer": "https://ocodigodeouro.com"}, json={"model": "meta-llama/llama-3.3-70b-instruct:free", "messages": mensagens, "max_tokens": 4000}, timeout=30)
+        r = requests.post("https://openrouter.ai/api/v1/chat/completions", headers={"Authorization": f"Bearer {chave_openrouter}", "Content-Type": "application/json", "HTTP-Referer": "https://ocodigodeouro.com"}, json={"model": "meta-llama/llama-3.3-70b-instruct:free", "messages": mensagens, "max_tokens": 4000}, timeout=25)
         if r.status_code == 200: return r.json()["choices"][0]["message"]["content"]
     except: return None
     return None
@@ -163,25 +172,29 @@ def extrair_texto(arquivo):
         if nome.endswith('.pdf'):
             with pdfplumber.open(caminho) as pdf:
                 for idx, p in enumerate(pdf.pages):
-                    txt_digital = p.extract_text()
-                    if txt_digital and len(txt_digital.strip()) > 30: texto += txt_digital + "\n"
-                    else:
-                        if idx < 5: 
-                            try:
+                    try:
+                        txt_digital = p.extract_text()
+                        if txt_digital and len(txt_digital.strip()) > 30: texto += txt_digital + "\n"
+                        else:
+                            if idx < 5: 
                                 buffer = io.BytesIO()
                                 p.to_image(resolution=150).original.save(buffer, format="JPEG")
                                 img_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-                                msg = [{"role": "user", "content": [{"type": "text", "text": "Extract text."}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}]}]
-                                texto += motor_neural_groq(msg, visao=True, max_tokens=1000) + "\n"
-                                time.sleep(1) 
-                            except: pass
+                                if img_b64:
+                                    msg = [{"role": "user", "content": [{"type": "text", "text": "Extract text."}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}]}]
+                                    ext = motor_neural_groq(msg, visao=True, max_tokens=1000)
+                                    if not ext.startswith("⚠️"): texto += ext + "\n"
+                                    time.sleep(1.5) 
+                    except: continue # Se uma página falhar, pula para a próxima sem derrubar tudo
         elif nome.endswith(('.xlsx', '.csv')): texto = (pd.read_excel(caminho) if nome.endswith('.xlsx') else pd.read_csv(caminho)).to_string() 
         elif nome.endswith('.docx'): texto += "\n".join([p.text for p in docx.Document(caminho).paragraphs])
         elif nome.endswith(('.png', '.jpg', '.jpeg', '.webp')):
             try:
                 img_b64 = encode_image(caminho)
-                msg = [{"role": "user", "content": [{"type": "text", "text": "Extract all data."}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}]}]
-                texto += f"[IMAGEM: {os.path.basename(caminho)}]\n" + motor_neural_groq(msg, visao=True, max_tokens=1500) + "\n"
+                if img_b64:
+                    msg = [{"role": "user", "content": [{"type": "text", "text": "Extract all data."}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}]}]
+                    ext = motor_neural_groq(msg, visao=True, max_tokens=1500)
+                    if not ext.startswith("⚠️"): texto += f"[IMAGEM: {os.path.basename(caminho)}]\n" + ext + "\n"
             except: pass
     except: pass
     return texto
@@ -190,16 +203,16 @@ def limpar_banco_de_dados():
     try:
         if os.path.exists(DIR_CHROMA): shutil.rmtree(DIR_CHROMA)
         return "🧹 Memória Purgada com Sucesso."
-    except Exception as e: return f"Erro: {e}"
+    except Exception as e: return f"Erro não crítico na purgação: {e}"
 
 # ==========================================
-# 6. MÓDULOS DE CHAT E WEBHOOK
+# 6. MÓDULOS DE CHAT OMNI-COMMAND
 # ==========================================
 def disparar_webhook(url, texto_contexto):
     if not url: return "⚠️ Requisito pendente: Informe a URL de Destino (Webhook)."
     if not texto_contexto: return "⚠️ Pacote vazio: Não há dados para transmitir."
     try:
-        r = requests.post(url, json={"sistema": "O Código de Ouro", "dados": texto_contexto, "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+        r = requests.post(url, json={"sistema": "O Código de Ouro", "dados": texto_contexto, "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}, timeout=15)
         return "✅ Protocolo de Transmissão Executado com Sucesso!" if r.status_code == 200 else f"✅ Sinal disparado. Retorno do Servidor: {r.status_code}"
     except Exception as e: return f"⚠️ Falha Crítica na Ponte de Dados: {e}"
 
@@ -216,10 +229,19 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             else: contexto_extra += f"\n[ACERVO ANEXADO]:\n{extrair_texto(cam)}\n"
                 
         if usar_internet and texto_usuario:
-            try: contexto_extra += "\n\n[MAPEAMENTO WEB EM TEMPO REAL]:\n" + "\n".join([f"{r['title']}: {r['body']}" for r in DDGS().text(texto_usuario, max_results=3)])
-            except: pass
+            try:
+                buscas = DDGS(timeout=10).text(texto_usuario, max_results=4)
+                if buscas: contexto_extra += "\n\n[MAPEAMENTO WEB EM TEMPO REAL]:\n" + "\n".join([f"FONTE ({r['title']}): {r['body']}" for r in buscas])
+            except Exception as e:
+                contexto_extra += f"\n\n[AVISO DE SISTEMA]: A Antena Web sofreu bloqueio temporário do buscador (Rate Limit)."
 
-        sys_prompt = f"Você é a Inteligência de Comando do sistema 'O Código de Ouro', operando na diretriz de {persona}. Suas respostas devem possuir excelência corporativa, assertividade letal e foco absoluto em performance estratégica."
+        sys_prompt = f"Você é a Inteligência de Comando do sistema 'O Código de Ouro', atuando como {persona}. "
+        sys_prompt += "DIRETRIZ SUPREMA: Se houver dados marcados como [MAPEAMENTO WEB], assuma-os como a verdade do presente. Não mencione limitações de data.\n\n"
+        sys_prompt += "HABILIDADES OMNI (GERAÇÃO DIRETA NO CHAT):\n"
+        sys_prompt += "- Se o usuário pedir para gerar, criar ou desenhar uma IMAGEM ou FOTO, adicione no final da sua resposta: [IMG: descrição da cena em inglês com detalhes fotorrealistas]\n"
+        sys_prompt += "- Se o usuário pedir para gerar ou criar um VÍDEO, adicione no final: [VID: descrição da cena em inglês para animação]\n"
+        sys_prompt += "- Se o usuário pedir para gerar um DOCUMENTO, RELATÓRIO, LAUDO ou ARQUIVO WORD, adicione no final: [DOC: insira aqui o texto e conteúdo completo que deve ir para dentro do documento]"
+        
         texto_final = texto_usuario + contexto_extra
         if imagens and not texto_final.strip(): texto_final = "Realize uma varredura pericial absoluta nesta imagem."
         elif not imagens and not texto_final.strip(): return "⚠️ Terminal ocioso. Insira uma diretriz de comando."
@@ -233,7 +255,11 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
 
         if imagens:
             conteudo_msg = [{"type": "text", "text": texto_final}]
-            for img in imagens: conteudo_msg.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encode_image(img)}"}})
+            for img in imagens: 
+                try:
+                    img_enc = encode_image(img)
+                    if img_enc: conteudo_msg.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_enc}"}})
+                except: pass
             mensagens_ia.append({"role": "user", "content": conteudo_msg})
             resposta = motor_neural_groq(mensagens_ia, visao=True)
         else:
@@ -241,43 +267,92 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             resposta = chamar_gigante_openrouter(mensagens_ia) if chave_openrouter else None
             if not resposta: resposta = motor_neural_groq(mensagens_ia, visao=False)
 
-        salvar_na_memoria(f"U: {texto_usuario[:50]}... IA: {resposta[:50]}...", "Terminal Master")
+        if not resposta or resposta.startswith("⚠️"):
+            salvar_na_memoria(f"Falha Chat: {resposta}", "Terminal Erro")
+            return resposta if resposta else "⚠️ Falha crítica ao gerar resposta neural."
+
+        if "[IMG:" in resposta:
+            for match in re.finditer(r'\[IMG:\s*(.*?)\]', resposta, re.IGNORECASE):
+                try:
+                    prompt_img = match.group(1)
+                    cam = gerar_imagem_estudio(prompt_img, "", "Fotorrealista 8k")
+                    if cam:
+                        tag_md = f"\n\n🖼️ **Ativo Visual Renderizado:**\n![Imagem](/file={os.path.abspath(cam)})"
+                        resposta = resposta.replace(match.group(0), tag_md)
+                    else: resposta = resposta.replace(match.group(0), "\n\n⚠️ [Contingência]: Renderizador de Imagens indisponível. Arte ignorada.")
+                except: resposta = resposta.replace(match.group(0), "")
+                    
+        if "[VID:" in resposta:
+            for match in re.finditer(r'\[VID:\s*(.*?)\]', resposta, re.IGNORECASE):
+                try:
+                    prompt_vid = match.group(1)
+                    cam, msg = gerar_video_ia(None, prompt_vid, "", "Cinematic Tracking")
+                    if cam:
+                        tag_html = f"\n\n🎥 **Vídeo Masterizado:**\n<video controls width='100%'><source src='/file={os.path.abspath(cam)}' type='video/mp4'></video>"
+                        resposta = resposta.replace(match.group(0), tag_html)
+                    else:
+                        resposta = resposta.replace(match.group(0), f"\n\n⚠️ Erro de Renderização de Vídeo: {msg}")
+                except Exception as e: resposta = resposta.replace(match.group(0), f"\n\n⚠️ Motor de Vídeo Offline.")
+                    
+        if "[DOC:" in resposta:
+            try:
+                match_doc = re.search(r'\[DOC:\s*(.*?)\]', resposta, re.IGNORECASE | re.DOTALL)
+                if match_doc:
+                    conteudo_doc = match_doc.group(1)
+                    pasta_doc = f"{DIR_CASOS}/Dossie_Omni_{datetime.now().strftime('%d%m_%H%M%S')}"
+                    os.makedirs(pasta_doc, exist_ok=True)
+                    cam_word = f"{pasta_doc}/Documento_Oficial_Gerado.docx"
+                    doc_arquivo = docx.Document()
+                    doc_arquivo.add_heading('Dossiê - O Código de Ouro', 0)
+                    doc_arquivo.add_paragraph(conteudo_doc.strip())
+                    doc_arquivo.save(cam_word)
+                    tag_doc = f"\n\n📄 **Documento Formatado Pronto:**\n[📥 Clique aqui para baixar o Relatório Word (.docx)](/file={os.path.abspath(cam_word)})"
+                    resposta = resposta.replace(match_doc.group(0), tag_doc)
+            except: pass
+
+        salvar_na_memoria(f"U: {texto_usuario[:50]}... IA: Processamento Omni Ativo.", "Terminal Master")
         return resposta
-    except Exception as e: return f"⚠️ Interrupção no Córtex do Sistema: {str(e)}"
+    except Exception as e: return f"⚠️ Interrupção no Córtex Principal: {str(e)}"
 
 # ==========================================
-# 7. AGENTE MESTRE, DOSSIÊ E ESTÚDIO
+# 7. AGENTE MESTRE E ESTÚDIO ISOLADOS
 # ==========================================
 def executar_agente_mestre(objetivo, progresso=gr.Progress()):
     if not objetivo: return "⚠️ Parâmetros insuficientes. Defina o alvo estratégico.", None
     try:
-        progresso(0.3, desc="🔍 Engajando Protocolos de Pesquisa Global...")
-        try: ctx = "\n".join([r['body'] for r in DDGS().text(objetivo, max_results=4)])
+        progresso(0.3, desc="🔍 Engajando Protocolos...")
+        try: ctx = "\n".join([r['body'] for r in DDGS(timeout=10).text(objetivo, max_results=4)])
         except: ctx = ""
         
-        progresso(0.6, desc="🧠 Sintetizando Matriz de Estratégia...")
-        prompt = f"Missão Alfa: '{objetivo}'. Dados colhidos no mercado atual: {ctx}. Formule um plano de ação tático corporativo de alto nível. Para fechar o dossiê, adicione obrigatoriamente a TAG: [IMAGEM: descrição detalhada em inglês fotorrealista de um ativo visual para a campanha]."
+        progresso(0.6, desc="🧠 Sintetizando Matriz...")
+        prompt = f"Missão Alfa: '{objetivo}'. Mercado: {ctx}. Crie plano tático. Adicione: [IMAGEM: descrição em inglês fotorrealista]."
         estrategia = chamar_gigante_openrouter([{"role": "user", "content": prompt}]) if chave_openrouter else None
         if not estrategia: estrategia = motor_neural_groq([{"role": "user", "content": prompt}])
+        if estrategia.startswith("⚠️"): return estrategia, None
         
-        progresso(0.9, desc="🎨 Injetando Prompts no Motor Gráfico...")
-        match = re.search(r'\[IMAGEM:\s*(.*?)\]', estrategia, re.IGNORECASE)
-        resposta_limpa = re.sub(r'\[IMAGEM:\s*(.*?)\]', '', estrategia, flags=re.IGNORECASE).strip()
-        cam_img = f"{DIR_MIDIA}/Agente_{datetime.now().strftime('%H%M%S')}.jpg"
-        cliente_hf.text_to_image(match.group(1).strip() if match else f"High-end corporate commercial asset for {objetivo}, 8k resolution", model="black-forest-labs/FLUX.1-schnell").save(cam_img)
+        progresso(0.9, desc="🎨 Renderizando Arte...")
+        cam_img = None
+        try:
+            match = re.search(r'\[IMAGEM:\s*(.*?)\]', estrategia, re.IGNORECASE)
+            resposta_limpa = re.sub(r'\[IMAGEM:\s*(.*?)\]', '', estrategia, flags=re.IGNORECASE).strip()
+            cam_img = f"{DIR_MIDIA}/Agente_{datetime.now().strftime('%H%M%S')}.jpg"
+            cliente_hf.text_to_image(match.group(1).strip() if match else f"High-end corporate asset for {objetivo}, 8k", model="black-forest-labs/FLUX.1-schnell").save(cam_img)
+        except: resposta_limpa = estrategia # Degradação Graciosa: Continua sem a foto se a HuggingFace falhar
         
-        salvar_na_memoria(objetivo, "Agente Autônomo")
-        progresso(1.0, desc="✅ Matriz Estratégica Finalizada.")
+        salvar_na_memoria(objetivo[:50], "Agente Autônomo")
+        progresso(1.0, desc="✅ Missão Cumprida.")
         return resposta_limpa, cam_img
-    except Exception as e: return f"⚠️ Falha na Operação do Agente: {e}", None
+    except Exception as e: return f"⚠️ Falha não fatal no Agente: {e}", None
 
 def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progresso=gr.Progress()):
     if not instrucao: return "⚠️ É necessário definir uma diretriz de análise.", None, None, "", ""
     palavras = 0
     try:
-        progresso(0.2, desc="Desfragmentando o Acervo (OCR Neural)...")
+        progresso(0.2, desc="Desfragmentando Acervo...")
         pasta = f"{DIR_CASOS}/Dossie_{datetime.now().strftime('%d%m_%H%M')}"
         os.makedirs(pasta, exist_ok=True)
+        if not embeddings: return "⚠️ Erro de Banco de Dados: Motor de Incorporação Offline.", None, None, "", ""
+        
         banco = Chroma(persist_directory=DIR_CHROMA, embedding_function=embeddings)
         fatiador = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
         
@@ -285,74 +360,93 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
             for arq in arquivos:
                 txt = extrair_texto(arq) 
                 palavras += len(txt.split())
-                if txt.strip(): banco.add_texts([f"[ARQUIVO ORIGEM: {os.path.basename(arq.name)}]\n{c}" for c in fatiador.split_text(txt)])
+                if txt.strip(): banco.add_texts([f"[ORIGEM: {os.path.basename(arq.name)}]\n{c}" for c in fatiador.split_text(txt)])
             
-        progresso(0.5, desc="Sintetizando Dados Cruzados...")
-        contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
-        regra_tribunal = "\n[SISTEMA ANTIFRAUDE E DUPLA CHECAGEM ATIVO]: Atue como um Inquisidor/Auditor Sênior. Sua prioridade é identificar falhas matemáticas, contradições entre as páginas e dados inconsistentes. Caso encontre, gere imediatamente uma seção imponente chamada '⚠️ ALERTA VERMELHO DE DIVERGÊNCIA' detalhando as falhas." if usar_tribunal else ""
-        regra_img = "\nAo concluir o laudo técnico, insira a seguinte tag: [IMAGEM: descrição em inglês fotorrealista que sirva de capa para este relatório]" if usar_img else ""
+        progresso(0.5, desc="Sintetizando Laudo...")
+        try: contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
+        except: contexto = ""
         
-        prompt = f"Inicie o Protocolo de Auditoria Pericial.\n\n[DADOS ARQUIVADOS]: {contexto}\n\n[DIRETRIZ DE ANÁLISE]: {instrucao}{regra_tribunal}{regra_img}"
+        regra_tribunal = "\n[ANTIFRAUDE]: Aponte contradições matemáticas em '⚠️ ALERTA DE DIVERGÊNCIA'." if usar_tribunal else ""
+        regra_img = "\n[IMAGEM: descrição em inglês fotorrealista para capa]" if usar_img else ""
+        
+        prompt = f"Protocolo Auditor.\n\n[DADOS]: {contexto}\n\n[AÇÃO]: {instrucao}{regra_tribunal}{regra_img}"
         resposta = chamar_gigante_openrouter([{"role": "user", "content": prompt}]) if chave_openrouter else None
         if not resposta: resposta = motor_neural_groq([{"role": "user", "content": prompt}])
+        if resposta.startswith("⚠️"): return resposta, None, None, "", ""
         
         cam_img = None
+        resposta_limpa = resposta
         if usar_img:
-            progresso(0.8, desc="Gerando Capa Executiva...")
-            match = re.search(r'\[IMAGEM:\s*(.*?)\]', resposta, re.IGNORECASE)
-            resposta_limpa = re.sub(r'\[IMAGEM:\s*(.*?)\]', '', resposta, flags=re.IGNORECASE).strip()
-            cam_img = f"{pasta}/Capa.jpg"
-            cliente_hf.text_to_image(match.group(1).strip() if match else "Dark luxury corporate dossier cover design", model="black-forest-labs/FLUX.1-schnell").save(cam_img)
-        else: resposta_limpa = resposta
-
-        progresso(0.9, desc="Compilando Laudo Oficial...")
-        cam_word = f"{pasta}/Laudo_Auditoria.docx"
-        doc = docx.Document()
-        doc.add_heading('Laudo de Auditoria - O Código de Ouro', 0)
-        if cam_img: doc.add_picture(cam_img, width=Inches(6.0))
-        doc.add_paragraph(resposta_limpa)
-        doc.save(cam_word)
-        salvar_na_memoria("Análise de Acervo: " + instrucao[:30], "Tribunal de Dados")
+            progresso(0.8, desc="Gerando Capa...")
+            try:
+                match = re.search(r'\[IMAGEM:\s*(.*?)\]', resposta, re.IGNORECASE)
+                resposta_limpa = re.sub(r'\[IMAGEM:\s*(.*?)\]', '', resposta, flags=re.IGNORECASE).strip()
+                cam_img = f"{pasta}/Capa.jpg"
+                cliente_hf.text_to_image(match.group(1).strip() if match else "Dark luxury corporate dossier cover", model="black-forest-labs/FLUX.1-schnell").save(cam_img)
+            except: resposta_limpa = resposta
         
-        cam_audio = f"{pasta}/Audio_Sintese.mp3"
+        progresso(0.9, desc="Compilando Docx...")
+        cam_word = f"{pasta}/Laudo.docx"
+        try:
+            doc = docx.Document()
+            doc.add_heading('Laudo de Auditoria - O Código de Ouro', 0)
+            if cam_img and os.path.exists(cam_img): doc.add_picture(cam_img, width=Inches(6.0))
+            doc.add_paragraph(resposta_limpa)
+            doc.save(cam_word)
+        except: cam_word = None
+        
+        salvar_na_memoria("Auditoria: " + instrucao[:30], "Tribunal")
+        
+        cam_audio = f"{pasta}/Audio.mp3" if usar_aud else None
         if usar_aud:
-            with open(f"{pasta}/t.txt", "w", encoding="utf-8") as f: f.write(resposta_limpa[:3000].replace('*', ''))
-            os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "{pasta}/t.txt" --write-media "{cam_audio}"')
-        return "✅ Auditoria Integralizada", cam_word, cam_audio if usar_aud else None, resposta_limpa, f"📊 MÉTRICA DE VARREDURA: {palavras} palavras auditadas em milissegundos."
-    except Exception as e: return f"Falha Estrutural na Auditoria: {e}", None, None, "", ""
+            try:
+                with open(f"{pasta}/t.txt", "w", encoding="utf-8") as f: f.write(resposta_limpa[:3000].replace('*', ''))
+                os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "{pasta}/t.txt" --write-media "{cam_audio}"')
+            except: cam_audio = None
+            
+        return "✅ Auditoria Completa", cam_word, cam_audio, resposta_limpa, f"📊 MÉTRICA: {palavras} palavras processadas."
+    except Exception as e: return f"⚠️ Falha de Segurança Operacional: {e}", None, None, "", ""
 
 def aprimorar_prompt(sujeito, fundo, estilo):
-    try: return motor_neural_groq([{"role": "user", "content": f"Traduza o pedido a seguir para INGLÊS. Adicione comandos de câmera como 8k resolution, highly detailed, photorealistic. Responda APENAS o texto em inglês final, sem explicações. Sujeito: {sujeito}, Fundo: {fundo}, Direção de Arte: {estilo}"}], max_tokens=100)
+    try: 
+        res = motor_neural_groq([{"role": "user", "content": f"Traduza para INGLÊS. Adicione 8k, photorealistic. Responda APENAS o texto em inglês final. Sujeito: {sujeito}, Fundo: {fundo}, Estilo: {estilo}"}], max_tokens=100)
+        return res if not res.startswith("⚠️") else f"{sujeito}, {fundo}, {estilo}"
     except: return f"{sujeito}, {fundo}, {estilo}"
 
 def gerar_imagem_estudio(sujeito, fundo, estilo):
     if not sujeito: return None
     c = f"{DIR_MIDIA}/Img_{datetime.now().strftime('%H%M%S')}.jpg"
-    cliente_hf.text_to_image(aprimorar_prompt(sujeito, fundo, estilo), model="black-forest-labs/FLUX.1-schnell").save(c)
-    return c
+    try:
+        cliente_hf.text_to_image(aprimorar_prompt(sujeito, fundo, estilo), model="black-forest-labs/FLUX.1-schnell").save(c)
+        return c
+    except: return None
 
 def gerar_video_ia(imagem_base, sujeito, fundo, movimento):
-    if imagem_base:
-        try: return Client("multimodalart/stable-video-diffusion").predict(imagem_base, api_name="/video"), "✅ Sequência visual animada com êxito."
-        except Exception: return None, "⚠️ Acesso restrito: Servidores gráficos em alta demanda."
-    if not sujeito: return None, "⚠️ O Sujeito Diretor é obrigatório para iniciar a renderização."
-    try: return Client("multimodalart/zeroscope-v2").predict(aprimorar_prompt(sujeito, fundo, movimento), api_name="/infer"), "✅ Masterização de Vídeo Finalizada."
-    except Exception: return None, "⚠️ Acesso restrito: Servidores gráficos em alta demanda."
+    try:
+        if imagem_base:
+            return Client("multimodalart/stable-video-diffusion").predict(imagem_base, api_name="/video"), "✅ Cena animada com êxito."
+        if not sujeito: return None, "⚠️ O Sujeito é obrigatório."
+        return Client("multimodalart/zeroscope-v2").predict(aprimorar_prompt(sujeito, fundo, movimento), api_name="/infer"), "✅ Masterização Finalizada."
+    except Exception as e: return None, f"⚠️ Motor Visual Congestionado. Tente novamente em breve."
 
 def falar_laudo_estudio(texto):
     if not texto: return None
     c = f"{DIR_MIDIA}/Voz_{datetime.now().strftime('%H%M%S')}.mp3"
-    with open("t.txt", "w", encoding="utf-8") as f: f.write(texto[:3000].replace('*', ''))
-    os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "t.txt" --write-media "{c}"')
-    return c
+    try:
+        with open("t.txt", "w", encoding="utf-8") as f: f.write(texto[:3000].replace('*', ''))
+        os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "t.txt" --write-media "{c}"')
+        return c
+    except: return None
 
 def gerar_backup():
     cam = "./Cofre_Master_Backup.zip"
-    with zipfile.ZipFile(cam, 'w', zipfile.ZIP_DEFLATED) as z:
-        for root, _, files in os.walk(DIRETORIO):
-            if "Banco_de_Dados_Vetorial" not in root:
-                for f in files: z.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), DIRETORIO))
-    return cam, "📦 Pacote de Extração Gerado e Criptografado."
+    try:
+        with zipfile.ZipFile(cam, 'w', zipfile.ZIP_DEFLATED) as z:
+            for root, _, files in os.walk(DIRETORIO):
+                if "Banco_de_Dados_Vetorial" not in root:
+                    for f in files: z.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), DIRETORIO))
+        return cam, "📦 Pacote de Extração Gerado."
+    except Exception as e: return None, f"⚠️ Erro ao empacotar: {e}"
 
 # ==========================================
 # 8. DESIGN SYSTEM ALTO LUXO
@@ -376,6 +470,13 @@ h1, h2, h3, h4, h5, h6, .tab-nav button { font-family: 'Outfit', sans-serif !imp
 footer { display: none !important; }
 p, label, .markdown-text, .chatbot { color: #E0E0E0 !important; font-size: 1.02rem !important; line-height: 1.6 !important; }
 h3 { color: #C5A059 !important; letter-spacing: 1px; }
+
+table, .table-wrap, .wrap-inner, .table-container { background-color: #121212 !important; border: 1px solid #333333 !important; border-radius: 8px !important; border-collapse: collapse !important; }
+thead th, th { background-color: #0A0A0A !important; color: #D4AF37 !important; border: 1px solid #333333 !important; font-family: 'Outfit', sans-serif !important; letter-spacing: 1px; padding: 12px !important; }
+tbody td, td { background-color: #121212 !important; color: #F5F5F7 !important; border: 1px solid #222 !important; padding: 10px !important; }
+tbody tr:hover td { background-color: #1A1A1A !important; }
+.cell-wrap input { color: #F5F5F7 !important; background-color: transparent !important; }
+
 code, pre { background-color: #181818 !important; color: #D4AF37 !important; border: 1px solid #2A2A2A !important; border-radius: 6px !important; }
 input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #121212 inset !important; -webkit-text-fill-color: #F5F5F7 !important; }
 textarea, input, select, .wrap-inner, .dropdown-menu, .wrap { background-color: #121212 !important; color: #F5F5F7 !important; border: 1px solid #333333 !important; border-radius: 8px !important; font-family: 'Inter', sans-serif !important; }
@@ -398,7 +499,7 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
     
     with gr.Sidebar(open=True):
         gr.HTML(renderizar_logo())
-        status_cerebro = "🔵 **Modo Matrix Gigante Ativo**" if os.environ.get("OPENROUTER_API_KEY") else f"🟢 **Radar de Córtex: {len(MODELOS_TEXTO_ATIVOS)} Motores Ativos**"
+        status_cerebro = "🔵 **Modo Matrix Ativo**" if os.environ.get("OPENROUTER_API_KEY") else f"🟢 **Protocolo Imortal Ativo**"
         gr.HTML(f"<h3 style='text-align: center; color: #555; text-transform: uppercase; font-size: 11px; letter-spacing: 4px; margin-bottom: 20px;'>{status_cerebro}</h3>")
         
         with gr.Accordion("⚙️ NÚCLEO DE OPERAÇÕES", open=False):
@@ -408,12 +509,6 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
             btn_limpa = gr.Button("🧹 Purgar Memória Volátil", variant="secondary")
             msg_sys = gr.Textbox(show_label=False, interactive=False)
             btn_limpa.click(fn=limpar_banco_de_dados, outputs=msg_sys)
-
-        with gr.Accordion("🗄️ CAIXA PRETA (MEMÓRIA SQLITE)", open=False):
-            gr.Markdown("*Acesso restrito ao Livro-Caixa e histórico vitalício criptografado da Inteligência Artificial.*")
-            tabela_memoria = gr.Dataframe(headers=["ID", "Data", "Tipo", "Resumo Criptográfico"], interactive=False)
-            btn_atualizar_db = gr.Button("Atualizar Visor Pericial", variant="secondary")
-            btn_atualizar_db.click(fn=ler_memoria, outputs=tabela_memoria)
         
         with gr.Accordion("📡 TERMINAL DE TRANSMISSÃO (WEBHOOKS)", open=False):
             gr.Markdown("*Ponte de injeção de dados direta via Zapier, Make e CRMs Corporativos.*")
@@ -434,9 +529,16 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
         with gr.TabItem("🧠 TERMINAL MASTER"):
             chat = gr.ChatInterface(
                 fn=responder_chat_multimodal, multimodal=True, additional_inputs=[persona_box, net_box],
-                chatbot=gr.Chatbot(height="70vh", show_label=False, placeholder="SISTEMA ATIVO E BLINDADO. QUAL A DIRETRIZ DE COMANDO?"),
-                textbox=gr.MultimodalTextbox(placeholder="Insira textos táticos, bases de dados Excel, PDFs ou anexos visuais...", container=False, scale=7, show_label=False)
+                chatbot=gr.Chatbot(height="70vh", show_label=False, placeholder="SISTEMA OMNI ATIVO. QUAL A DIRETRIZ DE COMANDO?"),
+                textbox=gr.MultimodalTextbox(placeholder="Insira textos táticos, bases de dados Excel, PDFs ou peça para gerar Imagens e Documentos...", container=False, scale=7, show_label=False)
             )
+
+        with gr.TabItem("🗄️ CAIXA PRETA (LOGS)"):
+            with gr.Column(elem_classes="box-painel"):
+                gr.Markdown("### 🗄️ LIVRO-CAIXA E HISTÓRICO VITALÍCIO\n*Acesso pericial aos registros de memória da Inteligência Artificial. Atualize para puxar as últimas operações criptografadas.*")
+                btn_atualizar_db = gr.Button("ATUALIZAR VISÃO PERICIAL", variant="primary")
+                tabela_memoria = gr.Dataframe(headers=["ID", "DATA", "MÓDULO", "REGISTRO DE OPERAÇÃO"], interactive=False, wrap=True)
+                btn_atualizar_db.click(fn=ler_memoria, outputs=tabela_memoria)
 
         with gr.TabItem("🤖 AGENTE DE ELITE"):
             with gr.Row():
@@ -505,4 +607,11 @@ for i in ["", "_1", "_2", "_3", "_4", "_5"]:
     if u and s: lista_de_usuarios.append((u, s))
 
 html_tela_login = renderizar_logo_login() if lista_de_usuarios else None
-interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_de_usuarios if lista_de_usuarios else None, auth_message=html_tela_login)
+
+interface.launch(
+    server_name="0.0.0.0", 
+    server_port=int(os.environ.get("PORT", 10000)), 
+    auth=lista_de_usuarios if lista_de_usuarios else None, 
+    auth_message=html_tela_login,
+    allowed_paths=[os.path.abspath(DIRETORIO)]
+)
