@@ -401,7 +401,7 @@ footer {display: none !important;}
 # ==========================================
 # 7. CONSTRUÇÃO DA INTERFACE VISUAL
 # ==========================================
-with gr.Blocks(title="Chat Titã AI") as interface:
+with gr.Blocks(title="Chat Titã AI", theme=tema_dola_premium, css=css_dola_premium, head=PWA_HEAD) as interface:
     
     id_sessao_atual = gr.State(f"Projeto_{datetime.now().strftime('%d%m_%H%M%S')}")
 
@@ -426,8 +426,7 @@ with gr.Blocks(title="Chat Titã AI") as interface:
             chat = gr.ChatInterface(
                 fn=responder_chat_central, multimodal=True, additional_inputs=[persona_box, net_box, id_sessao_atual],
                 chatbot=gr.Chatbot(height=720, placeholder="Envie fotos para editar, crie vídeos e imagens do zero, analise dados... Tudo acontece por aqui!"),
-                textbox=gr.MultimodalTextbox(placeholder="Digite ou anexe arquivos aqui...", container=False, scale=7),
-                submit_btn="Enviar 🚀", retry_btn="🔄 Refazer", undo_btn="✏️ Editar", clear_btn="🗑️ Limpar Conversa"
+                textbox=gr.MultimodalTextbox(placeholder="Digite ou anexe arquivos aqui...", container=False, scale=7)
             )
             arq_exportado = gr.File(label="Arquivo DOCX", visible=False)
             btn_exportar.click(fn=exportar_conversa_docx, inputs=[chat.chatbot], outputs=[arq_exportado]).then(lambda: gr.update(visible=True), None, arq_exportado)
