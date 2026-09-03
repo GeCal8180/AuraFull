@@ -112,7 +112,7 @@ def extrair_texto(arquivo):
     except: return ""
 
 # ==========================================
-# 4. MOTORES HACKEADOS E VIP DE MÍDIA
+# 4. MOTORES DE MÍDIA
 # ==========================================
 def motor_gerar_imagem(prompt_desc, proporcao="Vertical (TikTok/Reels)"):
     try:
@@ -268,8 +268,6 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
         if cam_edit and os.path.exists(cam_edit):
             b64_img = encode_file_b64(cam_edit)
             anexos_html += f"\n\n**✨ Imagem Editada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:18px; margin-top:8px; border: 2px solid #10A37F;' />\n"
-        else:
-            anexos_html += "\n\n*(⚠️ Ocorreu um erro ao editar a imagem nos servidores públicos. Tente novamente em alguns segundos.)*"
 
     match_aud = re.search(r'\[AÇÃO_AUDIO:\s*(.*?)\]', resposta_acumulada)
     if match_aud:
@@ -283,7 +281,7 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
     match_vid = re.search(r'\[AÇÃO_VIDEO:\s*(.*?)\]', resposta_acumulada)
     if match_vid:
         prompt_v = match_vid.group(1).strip()
-        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🎬 *Conectando aos supercomputadores de vídeo (Fila VIP - Isso leva alguns instantes)...*"
+        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🎬 *Conectando aos supercomputadores de vídeo...*"
         img_referencia = imagens_anexadas[-1] if imagens_anexadas else None
         cam_vid = motor_gerar_video(prompt_v, img_referencia)
         if cam_vid and os.path.exists(cam_vid):
@@ -355,7 +353,7 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
         doc.add_paragraph(resposta)
         doc.save(cam_word)
         
-        return "✅ Processamento Concluído!", cam_word, resposta, f"📊 {palavras} palavras analisadas com sucesso."
+        return "✅ Processamento Concluído!", cam_word, resposta, f"📊 {palavras} palavras analisadas."
     except Exception as e:
         return f"Erro: {e}", None, "", ""
 
@@ -371,7 +369,6 @@ PWA_HEAD = """
 <title>Chat Titã</title>
 """
 
-# CORREÇÃO APLICADA: gr.themes.sizes.radius_xxl 
 tema_dola_premium = gr.themes.Soft(
     primary_hue="zinc", secondary_hue="slate", neutral_hue="zinc",
     font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"], radius_size=gr.themes.sizes.radius_xxl,
@@ -404,7 +401,7 @@ footer {display: none !important;}
 # ==========================================
 # 7. CONSTRUÇÃO DA INTERFACE VISUAL
 # ==========================================
-with gr.Blocks(title="Chat Titã AI", theme=tema_dola_premium, css=css_dola_premium, head=PWA_HEAD) as interface:
+with gr.Blocks(title="Chat Titã AI") as interface:
     
     id_sessao_atual = gr.State(f"Projeto_{datetime.now().strftime('%d%m_%H%M%S')}")
 
@@ -428,7 +425,7 @@ with gr.Blocks(title="Chat Titã AI", theme=tema_dola_premium, css=css_dola_prem
             
             chat = gr.ChatInterface(
                 fn=responder_chat_central, multimodal=True, additional_inputs=[persona_box, net_box, id_sessao_atual],
-                chatbot=gr.Chatbot(height=720, placeholder="Envie fotos para editar, crie vídeos e imagens do zero, analise dados... Tudo acontece por aqui!", bubble_full_width=False, render_markdown=True),
+                chatbot=gr.Chatbot(height=720, placeholder="Envie fotos para editar, crie vídeos e imagens do zero, analise dados... Tudo acontece por aqui!"),
                 textbox=gr.MultimodalTextbox(placeholder="Digite ou anexe arquivos aqui...", container=False, scale=7),
                 submit_btn="Enviar 🚀", retry_btn="🔄 Refazer", undo_btn="✏️ Editar", clear_btn="🗑️ Limpar Conversa"
             )
@@ -475,4 +472,4 @@ for i in ["", "_1", "_2", "_3"]:
     s = os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
     if u and s: lista_usuarios.append((u, s))
 
-interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_usuarios, theme=tema_dola_premium, css=css_dola_premium)
+interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_usuarios, theme=tema_dola_premium, css=css_dola_premium, head=PWA_HEAD)
