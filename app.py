@@ -26,7 +26,9 @@ chave_hf = os.environ.get("HF_TOKEN")
 
 cliente_groq = Groq(api_key=chave_groq)
 cliente_hf = InferenceClient(token=chave_hf)
-MODELO_GROQ = "llama-3.3-70b-versatile"
+
+# ⬇️ A CORREÇÃO DE ACESSO ESTÁ AQUI ⬇️
+MODELO_GROQ = "llama-3.1-70b-versatile"
 MODELO_VISAO = "llama-3.2-90b-vision-preview"
 
 embeddings = HuggingFaceInferenceAPIEmbeddings(
@@ -49,7 +51,7 @@ for d in [DIRETORIO, DIR_CASOS, DIR_MIDIA]:
 # 3. EXTRAÇÃO E RENDERIZAÇÃO DA LOGO
 # ==========================================
 def renderizar_logo():
-    # Caminho absoluto blindado (Funciona no Render e Local)
+    # Caminho absoluto blindado
     base_dir = os.path.dirname(os.path.abspath(__file__))
     caminho = os.path.join(base_dir, "chamariz-sem-fundo.jpg")
     
@@ -62,7 +64,6 @@ def renderizar_logo():
         </div>
         '''
     else:
-        # Fallback de luxo caso a imagem não esteja no GitHub
         return '''
         <div style="text-align: center; margin-bottom: 30px; padding: 25px 15px; border-radius: 20px; background: linear-gradient(145deg, #BF953F, #B38728); box-shadow: 0 15px 35px rgba(212,175,55,0.3);">
             <h1 style="color: #000; font-family: 'Montserrat', sans-serif; font-weight: 900; letter-spacing: 3px; margin: 0; font-size: 20px;">O CÓDIGO</h1>
@@ -147,7 +148,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
         return resposta.choices[0].message.content
         
     except Exception as e:
-        return f"⚠️ **Falha no Motor Neural.** Servidor congestionado. Detalhe: `{str(e)}`"
+        return f"⚠️ **Falha no Motor Neural.** Conexão rejeitada. Detalhe: `{str(e)}`"
 
 def exportar_conversa(historico):
     if not historico: return None
@@ -220,7 +221,7 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
 
 def aprimorar_prompt(sujeito, fundo, estilo, tipo="imagem"):
     if not sujeito: return None
-    instrucao = f"Traduza para INGLÊS. Sujeito: {sujeito} | Fundo: {fundo} | Estilo: {estilo}. Adicione: 8k, highly detailed, photorealistic. Responda APENAS o texto em inglês." if tipo=="imagem" else f"Traduza para INGLÊS (MÁX 40 PALAVRAS). Ação: {sujeito} | Fundo: {fundo} | Movimento: {estilo}. Responda APENAS o texto em inglês."
+    instrucao = f"Traduza para INGLÊS. Sujeito: {sujeito} | Fundo: {fundo} | Estilo: {estilo}. Adicione termos: 8k, highly detailed, photorealistic. Responda APENAS o texto em inglês." if tipo=="imagem" else f"Traduza para INGLÊS (MÁX 40 PALAVRAS). Ação: {sujeito} | Fundo: {fundo} | Movimento: {estilo}. Responda APENAS o texto em inglês."
     try:
         r = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": instrucao}], model=MODELO_GROQ, temperature=0.1).choices[0].message.content.strip()
         if ":" in r and len(r.split(":")[0]) < 20: r = r.split(":", 1)[-1].strip()
@@ -260,7 +261,6 @@ def gerar_backup():
 # ==========================================
 # 7. DESIGN SYSTEM V12 (NEUMORFISMO ELITE)
 # ==========================================
-# O Gradio Base Theme extermina as bordas nativas
 tema_ultra = gr.themes.Base(
     font=[gr.themes.GoogleFont("Montserrat"), "sans-serif"],
 ).set(
@@ -289,49 +289,30 @@ tema_ultra = gr.themes.Base(
 )
 
 css_ultra = """
-/* Forçar Dark Mode Global Absoluto */
 body, .gradio-container { background-color: #000000 !important; color: #E5E7EB !important; font-family: 'Montserrat', sans-serif !important; }
 footer { display: none !important; }
-
-/* Eliminação completa das linhas quadradas */
 * { border-color: transparent !important; }
-
-/* O Sidebar flutuante e sombreado */
 .sidebar { background: #050505 !important; box-shadow: 10px 0px 30px rgba(0,0,0,0.9) !important; z-index: 100; padding: 20px !important; }
-
-/* Dropdown Ouro no Menu Lateral */
 .dropdown-menu, .wrap { background: #0A0A0A !important; border-radius: 16px !important; box-shadow: inset 2px 2px 5px #000, inset -2px -2px 5px #111 !important; color: #D4AF37 !important; }
 .label-wrap span { color: #888 !important; letter-spacing: 1px; }
-
-/* Botões do Menu Lateral - Purgar Memória em Tom Elegante em vez de Vermelho Barato */
 button { border-radius: 20px !important; text-transform: uppercase; font-weight: 700 !important; letter-spacing: 1px; transition: 0.3s all ease !important; }
 button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.8) !important; }
 button.primary { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4) !important; }
-
-/* Abas de Navegação Superiores (Glassmorfismo) */
 .tabs { background: transparent !important; }
 .tab-nav { background: #050505 !important; border-radius: 30px !important; padding: 10px !important; margin: 0 20px 30px 20px !important; box-shadow: 5px 5px 15px #000, -5px -5px 15px #111 !important; gap: 15px; }
 .tab-nav button { border-radius: 20px !important; color: #666 !important; padding: 12px 30px !important; }
 .tab-nav button.selected { color: #000 !important; background: linear-gradient(145deg, #BF953F, #B38728) !important; box-shadow: 0 0 20px rgba(212,175,55,0.4) !important; }
-
-/* Box Painéis (Aesthetics 3D) */
 .box-painel { background: linear-gradient(145deg, #0a0a0a, #050505) !important; border-radius: 30px !important; padding: 35px !important; box-shadow: 15px 15px 30px #000000, -5px -5px 20px #111111 !important; margin-bottom: 25px; }
-
-/* Chatbot Design de Luxo */
 .chat-container { border-radius: 24px !important; background: #050505 !important; box-shadow: inset 5px 5px 20px #000 !important; }
 .message.bot { background: linear-gradient(145deg, #111, #080808) !important; border-radius: 20px 20px 20px 0 !important; box-shadow: 2px 2px 10px #000 !important; }
 .message.user { background: #1A1A1A !important; border-radius: 20px 20px 0 20px !important; color: #D4AF37 !important; }
-
-/* Inputs de texto redondos */
 textarea, input[type="text"] { border-radius: 20px !important; background: #0A0A0A !important; padding: 15px !important; color: #FFF !important; box-shadow: inset 3px 3px 10px #000 !important; }
 """
 
-# Força ativação imediata do Dark Mode via Javascript
 forca_dark_mode = "function() { document.body.classList.add('dark'); }"
 
 with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_width=True, js=forca_dark_mode) as interface:
     
-    # === MENU LATERAL (SIDEBAR GOLD) ===
     with gr.Sidebar(open=True):
         gr.HTML(renderizar_logo())
         
@@ -347,7 +328,6 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
         btn_exportar = gr.Button("📥 Extrair Chat (Word)", variant="secondary")
         arq_exportado = gr.File(label="Protocolo", visible=False)
         
-        # Botão Escuro e Elegante (Adeus vermelho)
         btn_limpa = gr.Button("🧹 Resetar Cérebro Analítico", variant="secondary")
         msg_sys = gr.Textbox(show_label=False, interactive=False)
         btn_limpa.click(fn=limpar_banco_de_dados, outputs=msg_sys)
@@ -357,7 +337,6 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
         arq_b = gr.File(label="Arquivo ZIP", visible=False)
         btn_back.click(fn=gerar_backup, outputs=[arq_b, msg_b]).then(lambda: gr.update(visible=True), None, arq_b)
 
-    # === ÁREA CENTRAL (AESTHETIC) ===
     with gr.Tabs():
         
         with gr.TabItem("🧠 O CÓDIGO DE OURO"):
