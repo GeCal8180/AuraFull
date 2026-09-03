@@ -301,4 +301,9 @@ with gr.Blocks(theme=tema_premium, css=css_corporativo, title="Central IA Master
                     out_img = gr.Image(label="Imagem Final", type="filepath")
             b_img.click(fn=gerar_imagem, inputs=[txt_midia], outputs=[out_img])
 
-interface.launch(server_name="0.0.0.0", server_port=10000, auth=("GeCal", "@Jessica906854"))
+# Puxando o usuário e senha do cofre do Render
+usuario_seguro = os.environ.get("LOGIN_USUARIO")
+senha_segura = os.environ.get("LOGIN_SENHA")
+
+# Lançamento seguro e blindado
+interface.launch(server_name="0.0.0.0", server_port=10000, auth=(usuario_seguro, senha_segura))
