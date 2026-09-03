@@ -7,10 +7,8 @@ pdf2image
 fpdf
 groq
 langchain-text-splitters
-langchain-huggingface
 langchain-chroma
 langchain-community
 huggingface_hub
 edge-tts
-sentence-transformers
 duckduckgo-search
