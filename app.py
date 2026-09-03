@@ -13,6 +13,7 @@ import base64
 import sqlite3
 import requests
 import io
+import ast
 from datetime import datetime
 from groq import Groq
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -229,16 +230,12 @@ def gerar_video_ia(imagem_base, sujeito, fundo, movimento):
         if imagem_base:
             return Client("multimodalart/stable-video-diffusion").predict(imagem_base, api_name="/video"), "✅ Cena animada com êxito."
         if not sujeito: return None, "⚠️ O Sujeito é obrigatório."
-        
         prompt_en = aprimorar_prompt(sujeito, fundo, movimento)
         try:
             return Client("multimodalart/zeroscope-v2").predict(prompt_en, api_name="/infer"), "✅ Masterização Finalizada."
         except:
-            return Client("hysts/ModelScope-Text-To-Video-Synthesis").predict(prompt_en, api_name="/infer"), "✅ Masterização Finalizada (Rota Alternativa)."
-            
-    except Exception as e: 
-        salvar_na_memoria(f"Falha Motor Vídeo: {e}", "Erro Mídia")
-        return None, f"⚠️ Acesso restrito global: Os servidores públicos de vídeo da Hugging Face atingiram o limite. Detalhe: {str(e)[:40]}"
+            return Client("hysts/ModelScope-Text-To-Video-Synthesis").predict(prompt_en, api_name="/infer"), "✅ Masterização Finalizada (Alternativa)."
+    except Exception as e: return None, f"⚠️ Acesso restrito global: Servidores públicos lotados. {str(e)[:40]}"
 
 def falar_laudo_estudio(texto):
     if not texto: return None
@@ -260,7 +257,7 @@ def gerar_backup():
     except Exception as e: return None, f"⚠️ Erro ao empacotar: {e}"
 
 # ==========================================
-# 6. MÓDULOS DE CHAT OMNI-COMMAND
+# 6. MÓDULOS DE CHAT OMNI-COMMAND (COM SANITIZAÇÃO DE DADOS)
 # ==========================================
 def disparar_webhook(url, texto_contexto):
     if not url: return "⚠️ Requisito pendente: Informe a URL."
@@ -289,14 +286,15 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             except: contexto_extra += f"\n\n[AVISO]: Antena Web bloqueada temporariamente."
 
         sys_prompt = f"Você é a Inteligência de Comando do sistema 'O Código de Ouro', atuando como {persona}. "
-        sys_prompt += "DIRETRIZ SUPREMA: Se houver dados marcados como [MAPEAMENTO WEB], assuma-os como a verdade do presente. Não mencione limitações de data.\n\n"
-        sys_prompt += "HABILIDADES OMNI (GERAÇÃO DIRETA NO CHAT):\n"
-        sys_prompt += "- Se o usuário pedir para gerar, criar ou desenhar uma IMAGEM ou FOTO, adicione no final da sua resposta: [IMG: descrição da cena em inglês com detalhes fotorrealistas]\n"
-        sys_prompt += "- Se o usuário pedir para gerar ou criar um VÍDEO, adicione no final: [VID: descrição da cena em inglês para animação]\n"
-        sys_prompt += "- Se o usuário pedir para gerar um DOCUMENTO ou LAUDO, adicione no final: [DOC: insira aqui o texto e conteúdo completo que deve ir para dentro do documento]"
+        sys_prompt += "DIRETRIZ SUPREMA: Assuma os dados do [MAPEAMENTO WEB] como sendo o presente absoluto, ignorando limitações temporais do seu treinamento base.\n\n"
+        sys_prompt += "DIRETRIZ DE FORMATAÇÃO (MUITO IMPORTANTE): Você DEVE gerar sua resposta em Markdown estruturado, bonito e legível para humanos (use tabelas, tópicos e quebras de linha reais). É ESTRITAMENTE PROIBIDO retornar a sua resposta em formato JSON, listas ou dicionários de código (Ex: [{'text': ...}]). Nunca use os caracteres literais '\\n', apenas quebre a linha.\n\n"
+        sys_prompt += "HABILIDADES OMNI:\n"
+        sys_prompt += "- Para criar IMAGEM, adicione: [IMG: prompt descritivo em inglês fotorrealista]\n"
+        sys_prompt += "- Para criar VÍDEO, adicione: [VID: prompt descritivo em inglês para movimento]\n"
+        sys_prompt += "- Para criar DOCUMENTO, adicione: [DOC: texto completo que vai no documento]"
         
         texto_final = texto_usuario + contexto_extra
-        if imagens and not texto_final.strip(): texto_final = "Realize uma varredura pericial absoluta nesta imagem."
+        if imagens and not texto_final.strip(): texto_final = "Realize uma varredura pericial nesta imagem."
         elif not imagens and not texto_final.strip(): return "⚠️ Terminal ocioso. Insira uma diretriz de comando."
 
         mensagens_ia = [{"role": "system", "content": sys_prompt}]
@@ -324,32 +322,45 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             salvar_na_memoria(f"Falha Chat: {resposta}", "Terminal Erro")
             return resposta if resposta else "⚠️ Falha crítica ao gerar resposta neural."
 
-        if "[IMG:" in resposta:
-            for match in re.finditer(r'\[IMG:\s*(.*?)\]', resposta, re.IGNORECASE):
+        # INTERCEPTADOR SANITIZADOR DE DADOS (ANTI-JSON E ANTI-LITERAL NEWLINES)
+        resposta_limpa = str(resposta).strip()
+        # Corrige o caso da IA tentar imitar o formato de entrada JSON
+        if resposta_limpa.startswith("[{") and "'type':" in resposta_limpa:
+            try:
+                # Converte o JSON literal problemático em dicionário Python seguro
+                parsed = ast.literal_eval(resposta_limpa)
+                if isinstance(parsed, list) and len(parsed) > 0 and 'text' in parsed[0]:
+                    resposta_limpa = parsed[0]['text']
+            except: pass
+        # Força as quebras literais geradas pela IA a se tornarem quebras estruturais visuais reais
+        resposta_limpa = resposta_limpa.replace("\\n", "\n")
+
+        # Processadores de Mídia
+        if "[IMG:" in resposta_limpa:
+            for match in re.finditer(r'\[IMG:\s*(.*?)\]', resposta_limpa, re.IGNORECASE):
                 try:
                     prompt_img = match.group(1)
                     cam = gerar_imagem_estudio(prompt_img, "", "Fotorrealista 8k")
                     if cam:
                         tag_md = f"\n\n🖼️ **Ativo Visual Renderizado:**\n![Imagem](/file={os.path.abspath(cam)})"
-                        resposta = resposta.replace(match.group(0), tag_md)
-                    else: resposta = resposta.replace(match.group(0), "\n\n⚠️ [Contingência]: Renderizador de Imagens sobrecarregado.")
-                except: resposta = resposta.replace(match.group(0), "")
+                        resposta_limpa = resposta_limpa.replace(match.group(0), tag_md)
+                    else: resposta_limpa = resposta_limpa.replace(match.group(0), "\n\n⚠️ [Contingência]: Renderizador sobrecarregado.")
+                except: resposta_limpa = resposta_limpa.replace(match.group(0), "")
                     
-        if "[VID:" in resposta:
-            for match in re.finditer(r'\[VID:\s*(.*?)\]', resposta, re.IGNORECASE):
+        if "[VID:" in resposta_limpa:
+            for match in re.finditer(r'\[VID:\s*(.*?)\]', resposta_limpa, re.IGNORECASE):
                 try:
                     prompt_vid = match.group(1)
                     cam, msg = gerar_video_ia(None, prompt_vid, "", "Cinematic Tracking")
                     if cam:
                         tag_html = f"\n\n🎥 **Vídeo Masterizado:**\n<video controls width='100%'><source src='/file={os.path.abspath(cam)}' type='video/mp4'></video>"
-                        resposta = resposta.replace(match.group(0), tag_html)
-                    else:
-                        resposta = resposta.replace(match.group(0), f"\n\n⚠️ Erro de Renderização de Vídeo: {msg}")
-                except Exception as e: resposta = resposta.replace(match.group(0), f"\n\n⚠️ Motor de Vídeo Offline.")
+                        resposta_limpa = resposta_limpa.replace(match.group(0), tag_html)
+                    else: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ Erro de Vídeo: {msg}")
+                except: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ Motor de Vídeo Offline.")
                     
-        if "[DOC:" in resposta:
+        if "[DOC:" in resposta_limpa:
             try:
-                match_doc = re.search(r'\[DOC:\s*(.*?)\]', resposta, re.IGNORECASE | re.DOTALL)
+                match_doc = re.search(r'\[DOC:\s*(.*?)\]', resposta_limpa, re.IGNORECASE | re.DOTALL)
                 if match_doc:
                     conteudo_doc = match_doc.group(1)
                     pasta_doc = f"{DIR_CASOS}/Dossie_Omni_{datetime.now().strftime('%d%m_%H%M%S')}"
@@ -360,11 +371,11 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
                     doc_arquivo.add_paragraph(conteudo_doc.strip())
                     doc_arquivo.save(cam_word)
                     tag_doc = f"\n\n📄 **Documento Formatado Pronto:**\n[📥 Clique aqui para baixar o Relatório Word (.docx)](/file={os.path.abspath(cam_word)})"
-                    resposta = resposta.replace(match_doc.group(0), tag_doc)
+                    resposta_limpa = resposta_limpa.replace(match_doc.group(0), tag_doc)
             except: pass
 
-        salvar_na_memoria(f"U: {texto_usuario[:50]}... IA: Processamento Omni Ativo.", "Terminal Master")
-        return resposta
+        salvar_na_memoria(f"U: {texto_usuario[:50]}... IA: Processamento Estrutural Feito.", "Terminal Master")
+        return resposta_limpa
     except Exception as e: return f"⚠️ Interrupção no Córtex do Sistema: {str(e)}"
 
 # ==========================================
@@ -404,7 +415,7 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
         progresso(0.2, desc="Desfragmentando Acervo...")
         pasta = f"{DIR_CASOS}/Dossie_{datetime.now().strftime('%d%m_%H%M')}"
         os.makedirs(pasta, exist_ok=True)
-        if not embeddings: return "⚠️ Erro de Banco de Dados: Motor de Incorporação Offline.", None, None, "", ""
+        if not embeddings: return "⚠️ Erro de Banco de Dados: Motor Offline.", None, None, "", ""
         
         banco = Chroma(persist_directory=DIR_CHROMA, embedding_function=embeddings)
         fatiador = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
@@ -460,15 +471,6 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
         return "✅ Auditoria Completa", cam_word, cam_audio, resposta_limpa, f"📊 MÉTRICA: {palavras} palavras processadas."
     except Exception as e: return f"⚠️ Falha de Segurança Operacional: {e}", None, None, "", ""
 
-def falar_laudo_estudio(texto):
-    if not texto: return None
-    c = f"{DIR_MIDIA}/Voz_{datetime.now().strftime('%H%M%S')}.mp3"
-    try:
-        with open("t.txt", "w", encoding="utf-8") as f: f.write(texto[:3000].replace('*', ''))
-        os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "t.txt" --write-media "{c}"')
-        return c
-    except: return None
-
 # ==========================================
 # 8. DESIGN SYSTEM ALTO LUXO (COM SCROLL FIXO)
 # ==========================================
@@ -523,7 +525,7 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
     
     with gr.Sidebar(open=True):
         gr.HTML(renderizar_logo())
-        status_cerebro = "🔵 **Modo Matrix Gigante Ativo**" if os.environ.get("OPENROUTER_API_KEY") else f"🟢 **Radar de Córtex Ativo**"
+        status_cerebro = "🔵 **Modo Matrix Ativo**" if os.environ.get("OPENROUTER_API_KEY") else f"🟢 **Protocolo Imortal Ativo**"
         gr.HTML(f"<h3 style='text-align: center; color: #555; text-transform: uppercase; font-size: 11px; letter-spacing: 4px; margin-bottom: 20px;'>{status_cerebro}</h3>")
         
         with gr.Accordion("⚙️ NÚCLEO DE OPERAÇÕES", open=False):
@@ -554,7 +556,6 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
             chat = gr.ChatInterface(
                 fn=responder_chat_multimodal, multimodal=True, additional_inputs=[persona_box, net_box],
                 chatbot=gr.Chatbot(height="70vh", show_label=False, placeholder="SISTEMA OMNI ATIVO. QUAL A DIRETRIZ DE COMANDO?"),
-                # Trava Gradio ativada: Máximo de 5 linhas antes de criar scroll interno
                 textbox=gr.MultimodalTextbox(placeholder="Insira textos táticos, bases de dados Excel, PDFs ou peça para gerar Imagens e Documentos...", container=False, scale=7, show_label=False, max_lines=5)
             )
 
