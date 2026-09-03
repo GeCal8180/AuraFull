@@ -348,6 +348,7 @@ css_ultra = """
 
 body, .gradio-container { background-color: #070707 !important; color: #F5F5F7 !important; font-family: 'Inter', sans-serif !important; }
 h1, h2, h3, h4, h5, h6, .tab-nav button { font-family: 'Outfit', sans-serif !important; font-weight: 600 !important; }
+
 footer { display: none !important; }
 
 p, label, .markdown-text, .chatbot { color: #E0E0E0 !important; font-size: 1.02rem !important; line-height: 1.6 !important; }
@@ -461,5 +462,14 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
                     out_aud_estudio = gr.Audio(label="Arquivo Master (MP3)")
                     btn_gerar_aud.click(fn=falar_laudo_estudio, inputs=[txt_aud], outputs=[out_aud_estudio])
 
-lista_de_usuarios = [(os.environ.get(f"USUARIO{i}"), os.environ.get(f"SENHA{i}")) for i in ["", "_1", "_2"] if os.environ.get(f"USUARIO{i}")]
+# ==========================================
+# GESTÃO DE 6 USUÁRIOS/EQUIPE
+# ==========================================
+lista_de_usuarios = []
+for i in ["", "_1", "_2", "_3", "_4", "_5"]:
+    u = os.environ.get(f"LOGIN_USUARIO{i}") or os.environ.get(f"USUARIO{i}")
+    s = os.environ.get(f"LOGIN_SENHA{i}") or os.environ.get(f"SENHA{i}")
+    if u and s:
+        lista_de_usuarios.append((u, s))
+
 interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_de_usuarios if lista_de_usuarios else None)
