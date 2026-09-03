@@ -300,17 +300,13 @@ with gr.Blocks(title="Central Master") as interface:
                     net_box = gr.Checkbox(label="🌐 Conectar à Internet", value=False, scale=1)
                     btn_exportar = gr.Button("💾 Baixar Word", variant="secondary", scale=1)
             
-            # Botões de edição e envio configurados com clareza
+            # Chat Multimodal (Comandos de botões removidos, o sistema criará sozinho a interface correta)
             chat = gr.ChatInterface(
                 fn=responder_chat_multimodal, 
                 multimodal=True,
                 additional_inputs=[persona_box, net_box],
-                chatbot=gr.Chatbot(height=650, placeholder="Como posso ajudar no seu projeto hoje? (Passe o mouse sobre as mensagens enviadas para ver o botão ✏️ Editar)"),
-                textbox=gr.MultimodalTextbox(placeholder="Digite sua mensagem, anexe arquivos ou imagens aqui...", container=False, scale=7),
-                submit_btn="Enviar 🚀",
-                retry_btn="🔄 Gerar Nova Resposta",
-                undo_btn="✏️ Corrigir Última Mensagem",
-                clear_btn="🗑️ Limpar Chat"
+                chatbot=gr.Chatbot(height=650, placeholder="Como posso ajudar no seu projeto hoje? (Passe o mouse sobre a sua mensagem para ver o botão ✏️ Editar)"),
+                textbox=gr.MultimodalTextbox(placeholder="Digite sua mensagem, anexe arquivos ou imagens aqui e aperte Enter...", container=False, scale=7)
             )
             arq_exportado = gr.File(label="Histórico", visible=False)
             btn_exportar.click(fn=exportar_conversa, inputs=[chat.chatbot], outputs=[arq_exportado]).then(lambda: gr.update(visible=True), None, arq_exportado)
