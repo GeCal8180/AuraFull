@@ -2,13 +2,10 @@ gradio
 pandas
 python-docx
 pdfplumber
-pytesseract
-pdf2image
-fpdf
 groq
 langchain-text-splitters
-langchain-chroma
 langchain-community
+langchain-chroma
 huggingface_hub
 edge-tts
 duckduckgo-search
