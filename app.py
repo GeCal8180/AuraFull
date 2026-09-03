@@ -84,7 +84,7 @@ def carregar_sessao_chat(id_sessao):
     except: return [], id_sessao
 
 def iniciar_novo_chat():
-    novo_id = f"Projeto_{datetime.now().strftime('%d%m_%H%M%S')}"
+    novo_id = f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}"
     return [], novo_id, gr.update(choices=listar_sessoes_chat(), value=novo_id)
 
 # ==========================================
@@ -165,7 +165,7 @@ def motor_gerar_video(prompt_cena, imagem_base=None):
     return None
 
 # ==========================================
-# 5. O CHAT AGÊNTICO ABSOLUTO
+# 5. O CHAT AGÊNTICO
 # ==========================================
 def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessao):
     texto_usuario = mensagem.get("text", "") if isinstance(mensagem, dict) else str(mensagem)
@@ -174,44 +174,44 @@ def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessa
     contexto_extra = ""
     imagens_anexadas = []
     
-    yield "⏳ *Sincronizando rede neural...*"
+    yield "⏳ *Processando informações...*"
     
     for arq in arquivos:
         ext = arq.lower()
         if ext.endswith(('.png', '.jpg', '.jpeg', '.webp')):
             imagens_anexadas.append(arq)
-            yield f"👁️ *Escaneando visual da imagem enviada...*"
+            yield f"👁️ *Analisando a imagem enviada...*"
         else:
-            yield f"📄 *Processando dados do documento...*"
+            yield f"📄 *Lendo o conteúdo do documento...*"
             contexto_extra += f"\n[DOCUMENTO]:\n{extrair_texto(arq)}\n"
             
     if usar_internet and texto_usuario:
-        yield "🌐 *Buscando atualizações de mercado na Web...*"
+        yield "🌐 *Pesquisando dados atualizados na Web...*"
         try:
             resultados = DDGS().text(texto_usuario, max_results=4)
             contexto_extra += "\n\n[DADOS WEB]:\n" + "\n".join([f"Título: {r['title']} - Conteúdo: {r['body']}" for r in resultados])
         except: pass
 
-    yield "🧠 *Construindo a solução executiva...*"
+    yield "🧠 *Gerando resposta...*"
 
-    sys_prompt = f"""Você é um {persona}, um Agente Centralizador Omnichannel de IA (nível Enterprise).
-Responda com excelência técnica, tom direto e clareza.
+    sys_prompt = f"""Você é o {persona}, um assistente de IA avançado.
+Responda de forma clara, profissional e direta.
 
-SEUS 5 PODERES DE AÇÃO NO CHAT (Use apenas SE o usuário pedir explicitamente):
-1. GERAR NOVA IMAGEM (Do zero): 
-Inclua em uma linha isolada: [AÇÃO_IMAGEM: descrição altamente detalhada em inglês com 8k photorealistic | vertical] (Use 'vertical' para redes sociais ou 'quadrado').
+SEUS 5 PODERES NO CHAT (Use apenas SE o usuário pedir explicitamente):
+1. GERAR NOVA IMAGEM: 
+Inclua isoladamente: [AÇÃO_IMAGEM: descrição detalhada em inglês com 8k photorealistic | vertical] (ou 'quadrado').
 
-2. EDITAR IMAGEM ENVIADA (Mudar fundo/estilo):
-Se o usuário anexou uma imagem e quer modificá-la, inclua: [AÇÃO_EDITAR_IMAGEM: instrução direta da mudança em inglês]. Ex: [AÇÃO_EDITAR_IMAGEM: make the background a tropical beach]
+2. EDITAR IMAGEM ENVIADA:
+Inclua: [AÇÃO_EDITAR_IMAGEM: instrução da mudança em inglês]. Ex: [AÇÃO_EDITAR_IMAGEM: change background to a tropical beach]
 
 3. GERAR VÍDEO (Novo ou Animar Foto):
-Inclua em uma linha: [AÇÃO_VIDEO: curta descrição em inglês da ação com máx 25 palavras]
+Inclua: [AÇÃO_VIDEO: curta descrição em inglês da ação com máx 25 palavras]
 
 4. GERAR ÁUDIO / LOCUÇÃO:
-Inclua em uma linha: [AÇÃO_AUDIO: texto exato em português a ser falado pela voz neural]
+Inclua: [AÇÃO_AUDIO: texto exato em português para a voz neural]
 
-5. GERAR GRÁFICOS DE DADOS:
-Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```mermaid com gráficos visuais (pie chart ou bar chart)."""
+5. GRÁFICOS:
+Use blocos de código ```mermaid para gerar gráficos visuais de dados numéricos."""
 
     mensagens = [{"role": "system", "content": sys_prompt}]
     
@@ -226,7 +226,7 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
     texto_final = (texto_usuario + contexto_extra).strip()
 
     if imagens_anexadas:
-        conteudo_multimodal = [{"type": "text", "text": texto_final if texto_final else "Analise esta imagem."}]
+        conteudo_multimodal = [{"type": "text", "text": texto_final if texto_final else "Descreva ou edite esta imagem de acordo com minhas instruções."}]
         for img in imagens_anexadas:
             conteudo_multimodal.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encode_file_b64(img)}"}})
         mensagens.append({"role": "user", "content": conteudo_multimodal})
@@ -242,11 +242,11 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
         delta = pedaco.choices[0].delta.content
         if delta:
             resposta_acumulada += delta
-            texto_visivel = re.sub(r'\[AÇÃO_\w+:.*?\]', '⚙️ *(Acionando motor multimídia...)*', resposta_acumulada)
+            texto_visivel = re.sub(r'\[AÇÃO_\w+:.*?\]', '⚙️ *(Gerando mídia solicitada...)*', resposta_acumulada)
             yield texto_visivel
 
     # ==========================================
-    # PROCESSAMENTO DOS GATILHOS DE MÍDIA
+    # PROCESSAMENTO DE MÍDIA
     # ==========================================
     anexos_html = ""
     
@@ -254,45 +254,45 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
     if match_img:
         prompt_i = match_img.group(1).strip()
         prop_i = "Vertical" if (match_img.group(2) and "vertical" in match_img.group(2).lower()) else "Quadrado"
-        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🎨 *Fotografando cena em 8k (Aguarde)...*"
+        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🎨 *Criando a imagem solicitada...*"
         cam_gerada = motor_gerar_imagem(prompt_i, prop_i)
         if cam_gerada and os.path.exists(cam_gerada):
             b64_img = encode_file_b64(cam_gerada)
-            anexos_html += f"\n\n**🖼️ Imagem Gerada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:18px; margin-top:8px; box-shadow:0 8px 20px rgba(0,0,0,0.15);' />\n"
+            anexos_html += f"\n\n**🖼️ Imagem Gerada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:18px; border: 2px solid #D4AF37; margin-top:8px;' />\n"
 
     match_edit = re.search(r'\[AÇÃO_EDITAR_IMAGEM:\s*(.*?)\]', resposta_acumulada)
     if match_edit and imagens_anexadas:
         prompt_e = match_edit.group(1).strip()
-        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🖌️ *Modificando inteligentemente a imagem enviada (Preservando objeto)...*"
+        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🖌️ *Aplicando as edições na imagem...*"
         cam_edit = motor_editar_imagem(imagens_anexadas[-1], prompt_e)
         if cam_edit and os.path.exists(cam_edit):
             b64_img = encode_file_b64(cam_edit)
-            anexos_html += f"\n\n**✨ Imagem Editada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:18px; margin-top:8px; border: 2px solid #10A37F;' />\n"
+            anexos_html += f"\n\n**✨ Imagem Editada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:18px; border: 2px solid #D4AF37; margin-top:8px;' />\n"
 
     match_aud = re.search(r'\[AÇÃO_AUDIO:\s*(.*?)\]', resposta_acumulada)
     if match_aud:
         texto_loc = match_aud.group(1).strip()
-        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🎙️ *Gravando locução de estúdio...*"
+        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🎙️ *Criando o áudio da locução...*"
         cam_aud = motor_gerar_audio(texto_loc)
         if cam_aud and os.path.exists(cam_aud):
             b64_aud = encode_file_b64(cam_aud)
-            anexos_html += f"\n\n**🔊 Locução Pronta:**\n<audio controls src='data:audio/mp3;base64,{b64_aud}' style='width:100%; margin-top:8px;'></audio>\n"
+            anexos_html += f"\n\n**🔊 Locução:**\n<audio controls src='data:audio/mp3;base64,{b64_aud}' style='width:100%; margin-top:8px;'></audio>\n"
 
     match_vid = re.search(r'\[AÇÃO_VIDEO:\s*(.*?)\]', resposta_acumulada)
     if match_vid:
         prompt_v = match_vid.group(1).strip()
-        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🎬 *Conectando aos supercomputadores de vídeo...*"
+        yield re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada) + "\n\n🎬 *Iniciando a renderização do vídeo (isso pode levar alguns minutos)...*"
         img_referencia = imagens_anexadas[-1] if imagens_anexadas else None
         cam_vid = motor_gerar_video(prompt_v, img_referencia)
         if cam_vid and os.path.exists(cam_vid):
             b64_vid = encode_file_b64(cam_vid)
-            anexos_html += f"\n\n**🎥 Vídeo Gerado:**\n<video controls style='max-width:100%; border-radius:18px; margin-top:8px;' src='data:video/mp4;base64,{b64_vid}'></video>\n"
+            anexos_html += f"\n\n**🎥 Vídeo Gerado:**\n<video controls style='max-width:100%; border-radius:18px; border: 2px solid #D4AF37; margin-top:8px;' src='data:video/mp4;base64,{b64_vid}'></video>\n"
 
     resposta_final_limpa = re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada).strip() + anexos_html
     yield resposta_final_limpa
 
     try:
-        sessao_alvo = id_sessao if (id_sessao and id_sessao != "Nenhuma conversa salva") else f"Projeto_{datetime.now().strftime('%d%m_%H%M%S')}"
+        sessao_alvo = id_sessao if (id_sessao and id_sessao != "Nenhuma conversa salva") else f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}"
         arq_sessao = f"{DIR_CHATS}/{sessao_alvo}.json"
         historico_atual = []
         if os.path.exists(arq_sessao):
@@ -305,21 +305,21 @@ Para tabelas e planilhas numéricas, use obrigatoriamente blocos de código ```m
 
 def exportar_conversa_docx(historico):
     if not historico: return None
-    pasta = f"{DIR_CASOS}/Chat_{datetime.now().strftime('%d_%m_%H%M')}"
+    pasta = f"{DIR_CASOS}/Exportacoes_{datetime.now().strftime('%d_%m_%H%M')}"
     os.makedirs(pasta, exist_ok=True)
-    cam_word = f"{pasta}/Historico_Projeto.docx"
+    cam_word = f"{pasta}/Historico_do_Chat.docx"
     doc = docx.Document()
-    doc.add_heading('Relatório da Sessão Titã', 0)
+    doc.add_heading('Histórico da Conversa', 0)
     for item in historico:
         if isinstance(item, dict):
-            autor = "Você:" if item.get("role") == "user" else "Central de IA:"
+            autor = "Você:" if item.get("role") == "user" else "Chat IA:"
             doc.add_heading(autor, level=2)
             doc.add_paragraph(re.sub(r'<.*?>', '', item.get("content", "")))
     doc.save(cam_word)
     return cam_word
 
 def gerar_backup_zip():
-    cam = "./Backup_Projetos_Central.zip"
+    cam = "./Arquivos_Exportados.zip"
     with zipfile.ZipFile(cam, 'w', zipfile.ZIP_DEFLATED) as z:
         for root, _, files in os.walk(DIRETORIO):
             if "Banco_de_Dados_Vetorial" not in root:
@@ -327,11 +327,11 @@ def gerar_backup_zip():
     return cam
 
 def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
-    if not instrucao: return "⚠️ Forneça uma instrução.", None, "", ""
+    if not instrucao: return "⚠️ Forneça as instruções de análise.", None, "", ""
     palavras = 0
     try:
-        progresso(0.1, desc="Lendo arquivos...")
-        pasta = f"{DIR_CASOS}/Lote_{datetime.now().strftime('%d_%m_%Y__%Hh%M')}"
+        progresso(0.1, desc="Lendo documentos...")
+        pasta = f"{DIR_CASOS}/Analise_{datetime.now().strftime('%d_%m_%Y__%Hh%M')}"
         os.makedirs(pasta, exist_ok=True)
         banco = Chroma(persist_directory=DIR_CHROMA, embedding_function=embeddings)
         fatiador = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
@@ -342,127 +342,146 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
                 palavras += len(txt.split())
                 banco.add_texts([f"[FONTE: {os.path.basename(arq.name)}]\n{c}" for c in fatiador.split_text(txt)])
             
-        progresso(0.5, desc="Cruzando inteligência...")
+        progresso(0.5, desc="Cruzando informações...")
         contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
-        prompt = f"Você é um Especialista de Inteligência Sênior. DADOS:\n{contexto}\n\nINSTRUÇÃO: {instrucao}"
+        prompt = f"Você é um Analista Especialista. DADOS:\n{contexto}\n\nINSTRUÇÃO: {instrucao}"
         resposta = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ, max_tokens=4000).choices[0].message.content
         
-        cam_word = f"{pasta}/Relatorio_Executivo.docx"
+        cam_word = f"{pasta}/Resultado_da_Analise.docx"
         doc = docx.Document()
-        doc.add_heading('Relatório Executivo Oficial', 0)
+        doc.add_heading('Resultado da Análise', 0)
         doc.add_paragraph(resposta)
         doc.save(cam_word)
         
-        return "✅ Processamento Concluído!", cam_word, resposta, f"📊 {palavras} palavras analisadas."
+        return "✅ Análise Concluída!", cam_word, resposta, f"📊 Total: {palavras} palavras lidas e analisadas."
     except Exception as e:
-        return f"Erro: {e}", None, "", ""
+        return f"Erro durante a análise: {e}", None, "", ""
 
 # ==========================================
-# 6. DESIGN SYSTEM PWA NATIVO & MOBILE FIRST
+# 6. DESIGN SYSTEM: LUXURY BLACK & GOLD
 # ==========================================
 PWA_HEAD = """
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#18181B">
-<title>Chat Titã</title>
+<meta name="theme-color" content="#0A0A0A">
+<title>Titã AI</title>
 """
 
-tema_dola_premium = gr.themes.Soft(
-    primary_hue="zinc", secondary_hue="slate", neutral_hue="zinc",
-    font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"], radius_size=gr.themes.sizes.radius_xxl,
-).set(
-    body_background_fill="#F4F4F5", body_background_fill_dark="#18181B",
-    block_background_fill="#FFFFFF", block_background_fill_dark="#27272A",
-    border_color_primary="transparent", border_color_primary_dark="transparent",
-    block_border_width="0px", 
-    button_primary_background_fill="#18181B", button_primary_background_fill_dark="#FAFAFA", 
-    button_primary_text_color="#FFFFFF", button_primary_text_color_dark="#000000"
-)
-
-css_dola_premium = """
+css_black_gold = """
 footer {display: none !important;}
-.gradio-container {max-width: 1200px !important; margin: auto !important;}
+body, .gradio-container { background-color: #0A0A0A !important; color: #FFFFFF !important; }
+
+/* Ocultar elementos brancos padrão */
+.dark, .light { background-color: #0A0A0A !important; }
+
+/* Cabeçalho de Logotipo */
+.logo-container { text-align: center; padding: 25px 0 10px 0; }
+.logo-title { color: #D4AF37; font-size: 36px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 3px; font-family: 'Inter', sans-serif;}
+.logo-subtitle { color: #888888; font-size: 14px; margin-top: 5px; font-weight: 500; letter-spacing: 1px;}
+
+/* Abas estilo Pílula Dourada */
 .tabs {border: none !important; background: transparent !important;}
-.tab-nav {border-bottom: none !important; justify-content: center !important; font-size: 1.05em !important; margin-bottom: 25px; gap: 12px; padding-top: 15px;}
-.tab-nav button {border-radius: 40px !important; border: 1px solid var(--border-color-primary) !important; padding: 12px 28px !important; background: var(--block-background-fill) !important; font-weight: 600; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
-.tab-nav button.selected {background-color: var(--button-primary-background-fill) !important; color: var(--button-primary-text-color) !important; box-shadow: 0 10px 25px rgba(0,0,0,0.2);}
-.box-painel {border-radius: 28px !important; padding: 30px !important; margin-bottom: 25px; box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.08); background: var(--block-background-fill);}
-.dark .box-painel {box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.6);}
-.chat-container {border-radius: 28px !important; overflow: hidden; box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.08);}
-.message-wrap {border-radius: 28px !important;}
-.message {border-radius: 24px !important; padding: 16px 24px !important; font-size: 16px !important; line-height: 1.6;}
+.tab-nav {border-bottom: none !important; justify-content: center !important; font-size: 1.1em !important; margin-bottom: 25px; gap: 15px;}
+.tab-nav button {border-radius: 50px !important; border: 1px solid #333333 !important; padding: 12px 30px !important; background: #111111 !important; color: #FFFFFF !important; font-weight: 600; transition: all 0.3s ease;}
+.tab-nav button.selected {background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000000 !important; border: none !important; box-shadow: 0 0 15px rgba(212, 175, 55, 0.4) !important;}
+
+/* Painéis Altamente Arredondados */
+.box-painel {border-radius: 30px !important; padding: 30px !important; margin-bottom: 25px; background: #141414 !important; border: 1px solid #D4AF37 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important;}
+
+/* Chat Central */
+.chat-container {border-radius: 30px !important; overflow: hidden; background: #111111 !important; border: 1px solid #333333 !important;}
+.message-wrap {border-radius: 30px !important;}
+.message {border-radius: 25px !important; padding: 18px 24px !important; font-size: 16px !important; line-height: 1.6;}
+
+/* As mensagens do usuário ganham contorno Dourado */
+.message.user {background: transparent !important; border: 1px solid #D4AF37 !important; color: #FFFFFF !important;}
+/* As mensagens da IA ganham fundo cinza escuro */
+.message.bot {background: #1A1A1A !important; border: 1px solid #333333 !important; color: #E0E0E0 !important;}
+
+/* Botões Primários Dourados */
+button.primary {background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important;}
+button.primary:hover {transform: scale(1.02); box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);}
+
+/* Barras de Rolagem Douradas */
 ::-webkit-scrollbar {width: 6px; height: 6px;}
-::-webkit-scrollbar-track {background: transparent;}
-::-webkit-scrollbar-thumb {background: #ccc; border-radius: 10px;}
+::-webkit-scrollbar-track {background: #0A0A0A;}
+::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
 """
 
 # ==========================================
-# 7. CONSTRUÇÃO DA INTERFACE VISUAL
+# 7. CONSTRUÇÃO DA INTERFACE
 # ==========================================
-with gr.Blocks(title="Chat Titã AI", theme=tema_dola_premium, css=css_dola_premium, head=PWA_HEAD) as interface:
+with gr.Blocks(title="Titã AI", css=css_black_gold, head=PWA_HEAD) as interface:
     
-    id_sessao_atual = gr.State(f"Projeto_{datetime.now().strftime('%d%m_%H%M%S')}")
+    gr.HTML("""
+    <div class="logo-container">
+        <h1 class="logo-title">TITÃ AI</h1>
+        <p class="logo-subtitle">INTELIGÊNCIA MULTIMÍDIA AVANÇADA</p>
+    </div>
+    """)
+    
+    id_sessao_atual = gr.State(f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}")
 
     with gr.Sidebar(open=False):
-        gr.Markdown("### 🗂️ Projetos e Sessões")
-        btn_novo_chat = gr.Button("➕ Iniciar Novo Projeto", variant="primary")
-        lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), label="Histórico Salvo", interactive=True)
-        btn_carregar = gr.Button("Continuar Projeto")
-        btn_att_lista = gr.Button("🔄 Atualizar Sessões", variant="secondary")
+        gr.Markdown("### 🗂️ Histórico de Conversas")
+        btn_novo_chat = gr.Button("➕ Novo Chat", variant="primary")
+        lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), label="Conversas Anteriores", interactive=True)
+        btn_carregar = gr.Button("Carregar Conversa")
+        btn_att_lista = gr.Button("🔄 Atualizar Histórico", variant="secondary")
         btn_att_lista.click(fn=lambda: gr.update(choices=listar_sessoes_chat()), outputs=[lista_chats])
 
     with gr.Tabs():
         
-        # O ÚNICO CHAT QUE VOCÊ PRECISA USAR PARA TUDO
-        with gr.TabItem("💬 Omnichannel Chat"):
-            with gr.Accordion("⚙️ Especialidade e Dados", open=False):
+        # ABA 1: CHAT PRINCIPAL
+        with gr.TabItem("💬 Chat IA"):
+            with gr.Accordion("⚙️ Configurações da IA", open=False):
                 with gr.Row():
-                    persona_box = gr.Dropdown(choices=["Assistente Universal", "Copywriter (Ads/TikTok)", "Auditor de Dados"], value="Assistente Universal", label="Especialidade", scale=3)
-                    net_box = gr.Checkbox(label="🌐 Conectar à Web", value=False, scale=1)
-                    btn_exportar = gr.Button("💾 Exportar Documento (Word)", variant="secondary", scale=1)
+                    persona_box = gr.Dropdown(choices=["Assistente Padrão", "Especialista em Marketing", "Analista de Dados"], value="Assistente Padrão", label="Modelo de Resposta", scale=3)
+                    net_box = gr.Checkbox(label="🌐 Pesquisar na Web", value=False, scale=1)
+                    btn_exportar = gr.Button("💾 Exportar Chat (Word)", variant="secondary", scale=1)
             
             chat = gr.ChatInterface(
                 fn=responder_chat_central, multimodal=True, additional_inputs=[persona_box, net_box, id_sessao_atual],
-                chatbot=gr.Chatbot(height=720, placeholder="Envie fotos para editar, crie vídeos e imagens do zero, analise dados... Tudo acontece por aqui!"),
-                textbox=gr.MultimodalTextbox(placeholder="Digite ou anexe arquivos aqui...", container=False, scale=7)
+                chatbot=gr.Chatbot(height=650, placeholder="Como posso ajudar? (Envie fotos para editar, PDFs para analisar ou peça vídeos e áudios)"),
+                textbox=gr.MultimodalTextbox(placeholder="Digite sua mensagem ou anexe arquivos...", container=False, scale=7)
             )
-            arq_exportado = gr.File(label="Arquivo DOCX", visible=False)
+            arq_exportado = gr.File(label="Arquivo do Chat (Word)", visible=False)
             btn_exportar.click(fn=exportar_conversa_docx, inputs=[chat.chatbot], outputs=[arq_exportado]).then(lambda: gr.update(visible=True), None, arq_exportado)
             
             btn_carregar.click(fn=carregar_sessao_chat, inputs=[lista_chats], outputs=[chat.chatbot, id_sessao_atual])
             btn_novo_chat.click(fn=iniciar_novo_chat, outputs=[chat.chatbot, id_sessao_atual, lista_chats])
             
-        # ABA AUXILIAR DE EXPLORADOR
-        with gr.TabItem("📑 Leitor de Lotes Pesados"):
+        # ABA 2: PROCESSAMENTO EM LOTE
+        with gr.TabItem("📑 Análise de Documentos"):
             with gr.Row():
                 with gr.Column(scale=4, elem_classes="box-painel"):
-                    arq_lote = gr.File(label="Lote de Documentos (PDF, Word, Excel)", file_count="multiple")
-                    txt_instrucao = gr.Textbox(label="Instrução para a IA", lines=3, placeholder="O que você quer extrair ou cruzar destes documentos?")
-                    btn_lote = gr.Button("Processar Lote Inteiro", variant="primary")
+                    arq_lote = gr.File(label="Arquivos (PDF, Word, Excel)", file_count="multiple")
+                    txt_instrucao = gr.Textbox(label="Instruções de Análise", lines=3, placeholder="Ex: Resuma os pontos principais dos documentos")
+                    btn_lote = gr.Button("Analisar Documentos", variant="primary")
                     msg_status = gr.Textbox(show_label=False, interactive=False)
                 with gr.Column(scale=6):
-                    txt_relatorio = gr.Textbox(label="Relatório Gerado", lines=18, interactive=False)
-                    out_doc_lote = gr.File(label="Baixar Relatório (Word)")
+                    txt_relatorio = gr.Textbox(label="Resultado da Análise", lines=18, interactive=False)
+                    out_doc_lote = gr.File(label="Baixar Resultado (Word)")
             btn_lote.click(fn=gerar_dossie_lote, inputs=[arq_lote, txt_instrucao], outputs=[msg_status, out_doc_lote, txt_relatorio, msg_status])
 
-        # ABA AUXILIAR DE EXPLORADOR
-        with gr.TabItem("🗂️ Galeria e Cofre"):
+        # ABA 3: EXPLORADOR E GALERIA
+        with gr.TabItem("🗂️ Galeria e Arquivos"):
             with gr.Row():
                 with gr.Column(elem_classes="box-painel"):
-                    gr.Markdown("### 🖼️ Álbum de Fotos Geradas e Editadas")
-                    galeria_fotos = gr.Gallery(label="Galeria Visual", columns=4, height="auto")
-                    btn_att_gal = gr.Button("🔄 Atualizar Álbum", variant="primary")
+                    gr.Markdown("### 🖼️ Galeria de Imagens")
+                    galeria_fotos = gr.Gallery(label="Suas Imagens", columns=4, height="auto")
+                    btn_att_gal = gr.Button("🔄 Atualizar Galeria", variant="primary")
                     btn_att_gal.click(fn=atualizar_galeria_imagens, outputs=[galeria_fotos])
                 
                 with gr.Column(elem_classes="box-painel"):
-                    gr.Markdown("### 📁 Explorador de Mídias (Vídeos, PDFs, Áudios)")
-                    lista_geral = gr.File(label="Arquivos Baixáveis", file_count="multiple", interactive=False)
-                    btn_att_arquivos = gr.Button("🔄 Atualizar Lista", variant="primary")
+                    gr.Markdown("### 📁 Arquivos Gerados (Vídeos, Áudios, Documentos)")
+                    lista_geral = gr.File(label="Lista de Arquivos", file_count="multiple", interactive=False)
+                    btn_att_arquivos = gr.Button("🔄 Atualizar Arquivos", variant="primary")
                     btn_att_arquivos.click(fn=listar_arquivos_mortos, outputs=[lista_geral])
-                    btn_zip = gr.Button("Baixar Tudo de Uma Vez (ZIP)")
-                    out_zip = gr.File(label="Download do ZIP", visible=False)
+                    btn_zip = gr.Button("Baixar Tudo (ZIP)")
+                    out_zip = gr.File(label="Baixar ZIP", visible=False)
                     btn_zip.click(fn=gerar_backup_zip, outputs=[out_zip]).then(lambda: gr.update(visible=True), None, out_zip)
 
 lista_usuarios = []
@@ -471,4 +490,4 @@ for i in ["", "_1", "_2", "_3"]:
     s = os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
     if u and s: lista_usuarios.append((u, s))
 
-interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_usuarios, theme=tema_dola_premium, css=css_dola_premium, head=PWA_HEAD)
+interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_usuarios, js="() => document.body.classList.add('dark')")
