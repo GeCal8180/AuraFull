@@ -224,14 +224,12 @@ def aprimorar_prompt(sujeito, fundo, estilo_ou_movimento, tipo="imagem"):
         REGRA CRÍTICA: Modelos de vídeo suportam poucos caracteres. Resuma a tradução para o MÁXIMO DE 40 PALAVRAS. Adicione (high quality, 60fps, sharp focus). Responda APENAS com o texto em inglês."""
         
     try:
-        # A temperatura 0.1 impede que a IA alucine ou fuja da regra de tradução exata
         resposta = cliente_groq.chat.completions.create(
             messages=[{"role": "user", "content": instrucao}], 
             model=MODELO_GROQ,
             temperature=0.1
         ).choices[0].message.content.strip()
         
-        # Limpa caso a IA teime em colocar "Here is the prompt:"
         if ":" in resposta and len(resposta.split(":")[0]) < 20:
             resposta = resposta.split(":", 1)[-1].strip()
         return resposta.replace('"', '')
@@ -291,7 +289,7 @@ tema_ultra = gr.themes.Soft(
 
 css_ultra = "footer {display: none !important;} .gradio-container {max-width: 1050px !important; margin: auto !important;} .tabs {border: none !important;} .tab-nav {border-bottom: 1px solid var(--border-color-primary) !important; justify-content: center !important; font-size: 1.1em !important; margin-bottom: 20px;} .box-painel {border-radius: 12px; padding: 24px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid var(--border-color-primary);} .dark .box-painel {box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);} .chat-container {border-radius: 12px; overflow: hidden;}"
 
-with gr.Blocks(title="Central Master", theme=tema_ultra, css=css_ultra) as interface:
+with gr.Blocks(title="Central Master") as interface:
     with gr.Tabs():
         
         # ABA 1: CHAT PRINCIPAL
@@ -305,7 +303,7 @@ with gr.Blocks(title="Central Master", theme=tema_ultra, css=css_ultra) as inter
                 fn=responder_chat_multimodal, multimodal=True,
                 additional_inputs=[persona_box, net_box],
                 chatbot=gr.Chatbot(height=650, placeholder="Como posso ajudar no seu projeto hoje?"),
-                textbox=gr.Textbox(placeholder="Mensagem para a IA...", container=False, scale=7), theme="soft"
+                textbox=gr.Textbox(placeholder="Mensagem para a IA...", container=False, scale=7)
             )
             arq_exportado = gr.File(label="Histórico", visible=False)
             btn_exportar.click(fn=exportar_conversa, inputs=[chat.chatbot], outputs=[arq_exportado]).then(lambda: gr.update(visible=True), None, arq_exportado)
@@ -332,13 +330,13 @@ with gr.Blocks(title="Central Master", theme=tema_ultra, css=css_ultra) as inter
                     out_tel = gr.Textbox(show_label=False, lines=1, interactive=False)
             btn_exe.click(fn=gerar_dossie, inputs=[arq_up, txt_ordem, c_img, c_aud, c_trib], outputs=[msg_sys, out_word, out_aud, out_tela, out_tel])
 
-        # ABA 3: MESA DO DIRETOR (NOVA)
+        # ABA 3: MESA DO DIRETOR
         with gr.TabItem("🎬 Mesa de Direção (Estúdio)"):
             with gr.Row():
                 with gr.Column(elem_classes="box-painel"):
                     gr.Markdown("### 🖼️ Fotografia (FLUX.1 + Prompt IA)")
-                    img_sujeito = gr.Textbox(label="1. Foco Principal (Detalhe o que você quer)", placeholder="Ex: Uma garrafa térmica preta, textura fosca, tampa prateada...")
-                    img_fundo = gr.Textbox(label="2. Cenário / Fundo", placeholder="Ex: Em uma mesa de carvalho escuro, ambiente de escritório moderno, luz solar pela janela...")
+                    img_sujeito = gr.Textbox(label="1. Foco Principal", placeholder="Ex: Uma garrafa térmica preta, textura fosca...")
+                    img_fundo = gr.Textbox(label="2. Cenário / Fundo", placeholder="Ex: Em uma mesa de carvalho escuro...")
                     img_estilo = gr.Dropdown(choices=["Fotorrealista (Cinematic 8k)", "Ilustração 3D (Pixar/Disney)", "Cyberpunk Neon", "Minimalista Clean", "Pintura a Óleo", "Vintage/Retrô"], label="3. Estilo Visual", value="Fotorrealista (Cinematic 8k)")
                     btn_gerar_img = gr.Button("Disparar Câmera", variant="primary")
                     out_img = gr.Image(label="Resultado", type="filepath")
@@ -347,10 +345,9 @@ with gr.Blocks(title="Central Master", theme=tema_ultra, css=css_ultra) as inter
                 with gr.Column(elem_classes="box-painel"):
                     gr.Markdown("### 🎥 Set de Filmagem (Vídeo HD)")
                     vid_base = gr.Image(label="Opção A: Animar Foto (Ignora textos)", type="filepath")
-                    gr.Markdown("*Ou crie uma cena em movimento do zero:*")
-                    vid_acao = gr.Textbox(label="Opção B: Ação / Cena (Seja direto e claro)", placeholder="Ex: Um carro esportivo vermelho derrapando na curva...")
+                    vid_acao = gr.Textbox(label="Opção B: Ação / Cena", placeholder="Ex: Um carro esportivo vermelho derrapando...")
                     vid_fundo = gr.Textbox(label="Cenário", placeholder="Ex: Rodovia à noite chuvosa...")
-                    vid_mov = gr.Dropdown(choices=["Câmera Fixa", "Zoom In Lento (Aproximar)", "Zoom Out Lento (Afastar)", "Pan para Esquerda", "Pan para Direita", "Estilo Drone (Aéreo)"], label="Movimento de Câmera", value="Zoom In Lento (Aproximar)")
+                    vid_mov = gr.Dropdown(choices=["Câmera Fixa", "Zoom In Lento (Aproximar)", "Zoom Out Lento (Afastar)", "Pan para Esquerda", "Pan para Direita", "Estilo Drone (Aéreo)"], label="Movimento", value="Zoom In Lento (Aproximar)")
                     btn_gerar_vid = gr.Button("Gravar Vídeo", variant="primary")
                     out_vid = gr.Video(label="Resultado (MP4)")
                     msg_vid = gr.Textbox(show_label=False, interactive=False)
@@ -359,7 +356,7 @@ with gr.Blocks(title="Central Master", theme=tema_ultra, css=css_ultra) as inter
             with gr.Row():
                 with gr.Column(elem_classes="box-painel"):
                     gr.Markdown("### 🎙️ Estúdio de Dublagem")
-                    txt_aud = gr.Textbox(show_label=False, placeholder="Cole o roteiro em Português aqui para a locução neural de estúdio...", lines=2)
+                    txt_aud = gr.Textbox(show_label=False, placeholder="Cole o roteiro em Português aqui...", lines=2)
                     btn_gerar_aud = gr.Button("Sintetizar Voz", variant="primary")
                     out_aud_estudio = gr.Audio(label="Locução Pronta")
                     btn_gerar_aud.click(fn=falar_laudo_estudio, inputs=[txt_aud], outputs=[out_aud_estudio])
@@ -385,4 +382,4 @@ for i in ["", "_1", "_2", "_3"]:
     u, s = os.environ.get(f"LOGIN_USUARIO{i}" if i=="" else f"USUARIO{i}"), os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
     if u and s: lista_de_usuarios.append((u, s))
 
-interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_de_usuarios)
+interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_de_usuarios, theme=tema_ultra, css=css_ultra)
