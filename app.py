@@ -184,13 +184,12 @@ footer {display: none !important;}
 .box-painel {box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 15px; border-radius: 10px; background-color: #f8fafc;}
 """
 
-with gr.Blocks(theme=tema_premium, css=css_customizado, title="Central IA Master") as interface:
+# As formatações visuais saíram daqui (Gradio 6.0)...
+with gr.Blocks(title="Central IA Master") as interface:
     gr.Markdown("# 🏛️ Central de Inteligência Forense")
     gr.Markdown("*Plataforma SaaS Descentralizada (V6.0)*")
     
     with gr.Tabs():
-        
-        # ABA 1: COCKPIT MELHORADO
         with gr.TabItem("🔎 Cockpit de Análise"):
             with gr.Row():
                 with gr.Column(scale=4, elem_classes="box-painel"):
@@ -223,21 +222,18 @@ with gr.Blocks(theme=tema_premium, css=css_customizado, title="Central IA Master
                     
             btn_exe.click(fn=gerar_dossie, inputs=[arq_up, txt_ordem, c_aud, c_aud, c_trib], outputs=[msg_sys, out_word, out_aud, out_tela, out_tel])
 
-        # ABA 2: O CHAT DE VOLTA!
         with gr.TabItem("💬 Assistente Forense (Chat)"):
             gr.Markdown("### Converse livremente com a IA sobre leis, teses ou peça ajuda para redigir e-mails.")
             chat = gr.ChatInterface(
                 fn=responder_chat,
                 chatbot=gr.Chatbot(height=500, placeholder="O que vamos investigar hoje?"),
                 textbox=gr.Textbox(placeholder="Digite sua dúvida forense...", container=False, scale=7),
-                theme="soft",
                 submit_btn="Enviar 🚀",
                 retry_btn="🔄 Tentar Novamente",
                 clear_btn="🗑️ Limpar Conversa",
                 undo_btn="↩️ Desfazer"
             )
 
-        # ABA 3: ARQUIVO E SEGURANÇA
         with gr.TabItem("🗄️ Arquivos & Backup"):
             with gr.Row():
                 with gr.Column():
@@ -253,9 +249,11 @@ with gr.Blocks(theme=tema_premium, css=css_customizado, title="Central IA Master
                     arq_b = gr.File(label="Arquivo ZIP")
                     btn_back.click(fn=gerar_backup, outputs=[arq_b, msg_b])
 
-# Execução protegida
+# ... e vieram para cá (Adequação ao Gradio 6.0)
 interface.launch(
     server_name="0.0.0.0", 
     server_port=int(os.environ.get("PORT", 10000)), 
-    auth=(os.environ.get("LOGIN_USUARIO"), os.environ.get("LOGIN_SENHA"))
+    auth=(os.environ.get("LOGIN_USUARIO"), os.environ.get("LOGIN_SENHA")),
+    theme=tema_premium,
+    css=css_customizado
 )
