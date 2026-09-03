@@ -8,3 +8,4 @@ langchain-community
 langchain-chroma
 huggingface_hub
 edge-tts
+duckduckgo-search
