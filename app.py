@@ -30,7 +30,8 @@ chave_openrouter = os.environ.get("OPENROUTER_API_KEY")
 cliente_groq = Groq(api_key=chave_groq)
 cliente_hf = InferenceClient(token=chave_hf)
 
-MODELO_GROQ_RAPIDO = "llama-3.1-8b-instant"
+# Rota vitalícia e imortal do modelo rápido da Groq
+MODELO_GROQ_RAPIDO = "llama3-8b-8192"
 MODELO_VISAO = "llama-3.2-90b-vision-preview"
 
 embeddings = HuggingFaceInferenceAPIEmbeddings(
@@ -70,13 +71,20 @@ def salvar_na_memoria(conteudo, tipo="Geral"):
 # 3. RENDERIZAÇÃO DA LOGO E UTILS
 # ==========================================
 def renderizar_logo():
-    caminhos = ["chamariz-sem-fundo.jpg", "./chamariz-sem-fundo.jpg", os.path.join(os.path.dirname(os.path.abspath(__file__)), "chamariz-sem-fundo.jpg")]
-    caminho_real = next((c for c in caminhos if os.path.exists(c)), None)
-    
+    caminho_real = None
+    for root, dirs, files in os.walk("."):
+        for f in files:
+            if "chamariz" in f.lower() and "fundo" in f.lower():
+                caminho_real = os.path.join(root, f)
+                break
+        if caminho_real:
+            break
+
     if caminho_real:
+        extensao = "png" if caminho_real.lower().endswith(".png") else "jpeg"
         with open(caminho_real, "rb") as f:
             encoded = base64.b64encode(f.read()).decode('utf-8')
-        return f'''<div style="display: flex; justify-content: center; align-items: center; padding: 15px 0 30px 0;"><img src="data:image/jpeg;base64,{encoded}" style="max-width: 75%; filter: drop-shadow(0px 8px 20px rgba(212, 175, 55, 0.4));"></div>'''
+        return f'''<div style="display: flex; justify-content: center; align-items: center; padding: 15px 0 30px 0;"><img src="data:image/{extensao};base64,{encoded}" style="max-width: 75%; filter: drop-shadow(0px 8px 20px rgba(212, 175, 55, 0.4));"></div>'''
     else:
         return '''<div style="text-align: center; margin-bottom: 30px; padding: 25px 10px; border-radius: 12px; background: linear-gradient(145deg, #BF953F, #B38728); box-shadow: 0 10px 25px rgba(212,175,55,0.2);"><h1 style="color: #000; font-family: 'Outfit', sans-serif; font-weight: 800; letter-spacing: 4px; margin: 0; font-size: 20px;">O CÓDIGO DE OURO</h1></div>'''
 
@@ -201,7 +209,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
         salvar_na_memoria(f"USER: {texto_usuario}\nIA: {resposta}", "Chat (Híbrido)")
         return resposta
         
-    except Exception as e: return f"⚠️ **Falha de Conexão.** Detalhe técnico: `{str(e)}`"
+    except Exception as e: return f"⚠️ Falha de Conexão. Detalhe técnico: {str(e)}"
 
 def exportar_conversa(historico):
     if not historico: return None
@@ -296,7 +304,7 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
             with open(f"{pasta}/temp.txt", "w", encoding="utf-8") as f: f.write(resposta_limpa[:3000].replace('*', ''))
             os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "{pasta}/temp.txt" --write-media "{cam_audio}"')
         return "✅ Auditoria Concluída", cam_word, cam_audio if usar_aud else None, resposta_limpa, f"📊 STATUS: {palavras} palavras validadas."
-    except Exception as e: return f"Erro crítico: {e}", None, None, "", ""
+    except Exception as e: return f"Erro crítico: {str(e)}", None, None, "", ""
 
 def aprimorar_prompt(sujeito, fundo, estilo):
     try: return cliente_groq.chat.completions.create(messages=[{"role": "user", "content": f"Traduza para INGLÊS. Adicione 8k, photorealistic. Responda APENAS o texto. Sujeito: {sujeito} | Fundo: {fundo} | Estilo: {estilo}"}], model=MODELO_GROQ_RAPIDO, temperature=0.1).choices[0].message.content.strip()
@@ -353,6 +361,9 @@ footer { display: none !important; }
 
 p, label, .markdown-text, .chatbot { color: #E0E0E0 !important; font-size: 1.02rem !important; line-height: 1.6 !important; }
 h3 { color: #C5A059 !important; letter-spacing: 1px; }
+
+/* Exterminar os fundos cinzas claros de textos técnicos */
+code, pre { background-color: #181818 !important; color: #D4AF37 !important; border: 1px solid #2A2A2A !important; border-radius: 6px !important; font-family: monospace !important; padding: 2px 6px !important; }
 
 input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #121212 inset !important; -webkit-text-fill-color: #F5F5F7 !important; }
 textarea, input, select, .wrap-inner, .dropdown-menu, .wrap { background-color: #121212 !important; color: #F5F5F7 !important; border: 1px solid #333333 !important; border-radius: 8px !important; font-family: 'Inter', sans-serif !important; }
