@@ -30,8 +30,8 @@ chave_openrouter = os.environ.get("OPENROUTER_API_KEY")
 cliente_groq = Groq(api_key=chave_groq)
 cliente_hf = InferenceClient(token=chave_hf)
 
-# Rota vitalícia e imortal do modelo rápido da Groq
-MODELO_GROQ_RAPIDO = "llama3-8b-8192"
+# MOTOR MIXTRAL (Imune a quedas, com 32k de memória)
+MODELO_GROQ_RAPIDO = "mixtral-8x7b-32768"
 MODELO_VISAO = "llama-3.2-90b-vision-preview"
 
 embeddings = HuggingFaceInferenceAPIEmbeddings(
@@ -304,7 +304,7 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
             with open(f"{pasta}/temp.txt", "w", encoding="utf-8") as f: f.write(resposta_limpa[:3000].replace('*', ''))
             os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "{pasta}/temp.txt" --write-media "{cam_audio}"')
         return "✅ Auditoria Concluída", cam_word, cam_audio if usar_aud else None, resposta_limpa, f"📊 STATUS: {palavras} palavras validadas."
-    except Exception as e: return f"Erro crítico: {str(e)}", None, None, "", ""
+    except Exception as e: return f"Erro crítico: {e}", None, None, "", ""
 
 def aprimorar_prompt(sujeito, fundo, estilo):
     try: return cliente_groq.chat.completions.create(messages=[{"role": "user", "content": f"Traduza para INGLÊS. Adicione 8k, photorealistic. Responda APENAS o texto. Sujeito: {sujeito} | Fundo: {fundo} | Estilo: {estilo}"}], model=MODELO_GROQ_RAPIDO, temperature=0.1).choices[0].message.content.strip()
