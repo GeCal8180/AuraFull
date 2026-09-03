@@ -102,10 +102,10 @@ def falar_laudo(texto_laudo, pasta_destino):
     return cam_audio
 
 # ==========================================
-# 4. CHAT INTELIGENTE (NOVO!)
+# 4. CHAT INTELIGENTE 
 # ==========================================
 def responder_chat(mensagem, historico):
-    mensagens = [{"role": "system", "content": "Você é o Assistente Forense Chefe. Especialista em direito, perícia e análise de dados. Responda de forma técnica, objetiva e profissional."}]
+    mensagens = [{"role": "system", "content": "Você é o Assistente Forense Chefe. Responda de forma técnica, objetiva e profissional."}]
     for user_txt, ai_txt in historico:
         mensagens.append({"role": "user", "content": user_txt})
         mensagens.append({"role": "assistant", "content": ai_txt})
@@ -184,7 +184,6 @@ footer {display: none !important;}
 .box-painel {box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 15px; border-radius: 10px; background-color: #f8fafc;}
 """
 
-# As formatações visuais saíram daqui (Gradio 6.0)...
 with gr.Blocks(title="Central IA Master") as interface:
     gr.Markdown("# 🏛️ Central de Inteligência Forense")
     gr.Markdown("*Plataforma SaaS Descentralizada (V6.0)*")
@@ -227,11 +226,7 @@ with gr.Blocks(title="Central IA Master") as interface:
             chat = gr.ChatInterface(
                 fn=responder_chat,
                 chatbot=gr.Chatbot(height=500, placeholder="O que vamos investigar hoje?"),
-                textbox=gr.Textbox(placeholder="Digite sua dúvida forense...", container=False, scale=7),
-                submit_btn="Enviar 🚀",
-                retry_btn="🔄 Tentar Novamente",
-                clear_btn="🗑️ Limpar Conversa",
-                undo_btn="↩️ Desfazer"
+                textbox=gr.Textbox(placeholder="Digite sua dúvida forense...", container=False, scale=7)
             )
 
         with gr.TabItem("🗄️ Arquivos & Backup"):
@@ -249,11 +244,27 @@ with gr.Blocks(title="Central IA Master") as interface:
                     arq_b = gr.File(label="Arquivo ZIP")
                     btn_back.click(fn=gerar_backup, outputs=[arq_b, msg_b])
 
-# ... e vieram para cá (Adequação ao Gradio 6.0)
+# ==========================================
+# 7. GERENCIAMENTO SEGURO DE ACESSOS 
+# ==========================================
+lista_de_usuarios = []
+
+# Vaga Master
+if os.environ.get("LOGIN_USUARIO") and os.environ.get("LOGIN_SENHA"):
+    lista_de_usuarios.append((os.environ.get("LOGIN_USUARIO"), os.environ.get("LOGIN_SENHA")))
+
+# Vaga Equipe 1
+if os.environ.get("USUARIO_1") and os.environ.get("SENHA_1"):
+    lista_de_usuarios.append((os.environ.get("USUARIO_1"), os.environ.get("SENHA_1")))
+
+# Vaga Equipe 2
+if os.environ.get("USUARIO_2") and os.environ.get("SENHA_2"):
+    lista_de_usuarios.append((os.environ.get("USUARIO_2"), os.environ.get("SENHA_2")))
+
 interface.launch(
     server_name="0.0.0.0", 
     server_port=int(os.environ.get("PORT", 10000)), 
-    auth=(os.environ.get("LOGIN_USUARIO"), os.environ.get("LOGIN_SENHA")),
+    auth=lista_de_usuarios,
     theme=tema_premium,
     css=css_customizado
 )
