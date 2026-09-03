@@ -286,6 +286,10 @@ tema_ultra = gr.themes.Base(
     block_label_text_color_dark="#D4AF37",
     block_title_text_color="#D4AF37",
     block_title_text_color_dark="#D4AF37",
+    input_background_fill="#141414",
+    input_background_fill_dark="#141414",
+    input_border_color="#444444",
+    input_border_color_dark="#444444",
     button_primary_background_fill="linear-gradient(145deg, #D4AF37, #AA7C11)",
     button_primary_background_fill_dark="linear-gradient(145deg, #D4AF37, #AA7C11)",
     button_primary_text_color="#000000",
@@ -300,11 +304,23 @@ footer { display: none !important; }
 span, p, label, h1, h2, h3, h4, .markdown-text, .chatbot { color: #F3F4F6 !important; }
 h3 { color: #D4AF37 !important; }
 
+/* =======================================================
+   CORREÇÃO DO LOGIN: Bloqueio do Autofill do Navegador
+========================================================== */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #111111 inset !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
 /* Legibilidade forçada para inputs e caixas de texto */
 textarea, input, select, .wrap-inner, .dropdown-menu, .wrap { 
     background-color: #111111 !important; 
     color: #FFFFFF !important; 
-    border: 1px solid #444444 !important; 
+    border: 1px solid #333333 !important; 
     border-radius: 12px !important; 
 }
 .label-wrap span { color: #CCCCCC !important; }
