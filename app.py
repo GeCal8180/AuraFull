@@ -56,7 +56,7 @@ def listar_arquivos_mortos():
     arquivos.sort(key=os.path.getmtime, reverse=True)
     return arquivos
 
-registrar_log("Sistema Moderno V6.0 Iniciado.")
+registrar_log("Sistema Minimalista V6.1 Iniciado.")
 
 # ==========================================
 # 3. EXTRAÇÃO E FUNÇÕES BASE
@@ -65,7 +65,7 @@ def limpar_banco_de_dados():
     try:
         if os.path.exists(DIR_CHROMA): shutil.rmtree(DIR_CHROMA)
         registrar_log("Banco de Dados Limpo.")
-        return "🧹 Mesa Limpa! Sistema seguro e isolado."
+        return "🧹 Mesa Limpa! Memória isolada."
     except Exception as e: return f"Erro: {e}"
 
 def ouvir_microfone(audio_path):
@@ -102,16 +102,16 @@ def falar_laudo(texto_laudo, pasta_destino):
     return cam_audio
 
 # ==========================================
-# 4. CHAT INTELIGENTE 
+# 4. CHAT INTELIGENTE (MOTOR PRINCIPAL)
 # ==========================================
 def responder_chat(mensagem, historico):
-    mensagens = [{"role": "system", "content": "Você é o Assistente Forense Chefe. Responda de forma técnica, objetiva e profissional."}]
+    mensagens = [{"role": "system", "content": "Você é o Assistente Forense Chefe. Comporte-se como uma IA avançada estilo ChatGPT, mas com especialidade em direito, perícia e análise de dados. Responda de forma clara, técnica e objetiva."}]
     for user_txt, ai_txt in historico:
         mensagens.append({"role": "user", "content": user_txt})
         mensagens.append({"role": "assistant", "content": ai_txt})
     mensagens.append({"role": "user", "content": mensagem})
     
-    resposta = cliente_groq.chat.completions.create(messages=mensagens, model=MODELO_GROQ, max_tokens=2000).choices[0].message.content
+    resposta = cliente_groq.chat.completions.create(messages=mensagens, model=MODELO_GROQ, max_tokens=2500).choices[0].message.content
     return resposta
 
 # ==========================================
@@ -137,7 +137,7 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
                 chunks = fatiador.split_text(txt)
                 banco.add_texts([f"[FONTE: {os.path.basename(arq.name)}]\n{c}" for c in chunks])
             
-        progresso(0.5, desc="A IA está cruzando os dados...")
+        progresso(0.5, desc="Cruzando os dados...")
         contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
         
         prompt = f"""Você é um Perito Sênior. 
@@ -147,7 +147,7 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
         
         resposta = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ, max_tokens=4000).choices[0].message.content
         
-        progresso(0.8, desc="Gerando Relatório Final...")
+        progresso(0.8, desc="Gerando Relatório...")
         cam_word = f"{pasta}/Laudo.docx"
         doc = docx.Document()
         doc.add_heading('Laudo Pericial Oficial', 0)
@@ -170,76 +170,75 @@ def gerar_backup():
     return cam, "📦 Backup Pronto"
 
 # ==========================================
-# 6. INTERFACE MODERNA (V6.0)
+# 6. INTERFACE MINIMALISTA (TIPO CHATGPT)
 # ==========================================
-tema_premium = gr.themes.Soft(
-    primary_hue="indigo",
-    secondary_hue="blue",
-    neutral_hue="slate",
+tema_chatgpt = gr.themes.Default(
+    primary_hue="zinc",
+    secondary_hue="zinc",
+    neutral_hue="zinc",
     font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"]
 )
-css_customizado = """
+css_minimalista = """
 footer {display: none !important;} 
-.gradio-container {border-top: 6px solid #4f46e5; border-radius: 8px;}
-.box-painel {box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 15px; border-radius: 10px; background-color: #f8fafc;}
+.gradio-container {border-top: none; max-width: 1200px !important;}
+.tabs {border-bottom: 1px solid #e5e7eb;}
+.box-painel {border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; background-color: #ffffff;}
 """
 
-with gr.Blocks(title="Central IA Master") as interface:
-    gr.Markdown("# 🏛️ Central de Inteligência Forense")
-    gr.Markdown("*Plataforma SaaS Descentralizada (V6.0)*")
+with gr.Blocks(title="Assistente Forense", theme=tema_chatgpt, css=css_minimalista) as interface:
     
     with gr.Tabs():
-        with gr.TabItem("🔎 Cockpit de Análise"):
+        
+        # ABA 1 AGORA É O CHAT (PÁGINA INICIAL)
+        with gr.TabItem("💬 Assistente Forense"):
+            chat = gr.ChatInterface(
+                fn=responder_chat,
+                chatbot=gr.Chatbot(height=650, placeholder="Olá, Diretor. Como posso ajudar na investigação hoje?"),
+                textbox=gr.Textbox(placeholder="Envie uma mensagem para a IA...", container=False, scale=7)
+            )
+
+        # ABA 2 É O COCKPIT PARA DOCUMENTOS PESADOS
+        with gr.TabItem("🔎 Processador de Documentos (Dossiês)"):
             with gr.Row():
                 with gr.Column(scale=4, elem_classes="box-painel"):
-                    gr.Markdown("### 1. Inserir Evidências")
-                    arq_up = gr.File(label="Lote de Arquivos (PDF, Excel, Áudio)", file_count="multiple")
+                    gr.Markdown("### 📂 Inserir Lote de Evidências")
+                    arq_up = gr.File(label="PDFs, Excel, Word, Áudios", file_count="multiple")
                     
-                    gr.Markdown("### 2. Instrução ao Perito")
+                    gr.Markdown("### 🎯 Ordem de Serviço")
                     with gr.Row():
                         mic = gr.Audio(sources=["microphone"], type="filepath", label="Falar")
-                        txt_ordem = gr.Textbox(show_label=False, lines=3, placeholder="Ex: Analise os contratos e aponte contradições...")
+                        txt_ordem = gr.Textbox(show_label=False, lines=4, placeholder="Descreva o que a IA deve buscar ou analisar nestes arquivos...")
                     mic.stop_recording(fn=ouvir_microfone, inputs=mic, outputs=txt_ordem)
                     
-                    gr.Markdown("### 3. Configurações")
                     with gr.Row():
-                        c_aud = gr.Checkbox(label="🔊 Gerar Áudio", value=False)
-                        c_trib = gr.Checkbox(label="⚖️ Modo Tribunal", value=False)
+                        c_aud = gr.Checkbox(label="🔊 Gerar Laudo em Áudio", value=False)
+                        c_trib = gr.Checkbox(label="⚖️ Modo Debate (Tribunal)", value=False)
                     
-                    btn_exe = gr.Button("🚀 EXECUTAR ANÁLISE", variant="primary", size="lg")
-                    btn_limpa = gr.Button("🧹 Limpar Caso Atual (Memória)", variant="secondary")
+                    btn_exe = gr.Button("Gerar Dossiê Oficial", variant="primary", size="lg")
+                    btn_limpa = gr.Button("Limpar Memória do Caso", variant="secondary")
                     msg_sys = gr.Textbox(show_label=False, interactive=False)
                     btn_limpa.click(fn=limpar_banco_de_dados, outputs=msg_sys)
 
                 with gr.Column(scale=6):
-                    gr.Markdown("### 📄 Resultados da Operação")
+                    out_tela = gr.Textbox(label="Laudo Executivo", lines=20, interactive=False)
                     with gr.Row():
-                        out_word = gr.File(label="Baixar Laudo (Word)")
+                        out_word = gr.File(label="Baixar Word")
                         out_aud = gr.Audio(label="Ouvir Resumo")
-                    out_tela = gr.Textbox(label="Visualização do Laudo", lines=18, interactive=False)
-                    out_tel = gr.Textbox(label="Telemetria (Raio-X)", lines=2, interactive=False)
+                    out_tel = gr.Textbox(show_label=False, lines=1, interactive=False)
                     
             btn_exe.click(fn=gerar_dossie, inputs=[arq_up, txt_ordem, c_aud, c_aud, c_trib], outputs=[msg_sys, out_word, out_aud, out_tela, out_tel])
 
-        with gr.TabItem("💬 Assistente Forense (Chat)"):
-            gr.Markdown("### Converse livremente com a IA sobre leis, teses ou peça ajuda para redigir e-mails.")
-            chat = gr.ChatInterface(
-                fn=responder_chat,
-                chatbot=gr.Chatbot(height=500, placeholder="O que vamos investigar hoje?"),
-                textbox=gr.Textbox(placeholder="Digite sua dúvida forense...", container=False, scale=7)
-            )
-
+        # ABA 3: ARQUIVOS
         with gr.TabItem("🗄️ Arquivos & Backup"):
             with gr.Row():
-                with gr.Column():
-                    gr.Markdown("### 📂 Arquivo Morto")
-                    btn_lista = gr.Button("🔄 Atualizar Lista")
-                    galeria = gr.File(label="Arquivos Salvos", file_count="multiple", interactive=False)
+                with gr.Column(elem_classes="box-painel"):
+                    gr.Markdown("### Histórico de Casos")
+                    btn_lista = gr.Button("Atualizar Lista")
+                    galeria = gr.File(label="Documentos Gerados", file_count="multiple", interactive=False)
                     btn_lista.click(fn=listar_arquivos_mortos, outputs=galeria)
-                with gr.Column():
-                    gr.Markdown("### 🔒 Backup e Segurança")
-                    gr.Markdown("Lembre-se de fazer o backup ao final do dia.")
-                    btn_back = gr.Button("⬇️ GERAR BACKUP COMPLETO (.ZIP)", variant="primary")
+                with gr.Column(elem_classes="box-painel"):
+                    gr.Markdown("### Segurança")
+                    btn_back = gr.Button("Gerar Backup Completo", variant="primary")
                     msg_b = gr.Textbox(show_label=False)
                     arq_b = gr.File(label="Arquivo ZIP")
                     btn_back.click(fn=gerar_backup, outputs=[arq_b, msg_b])
@@ -249,22 +248,17 @@ with gr.Blocks(title="Central IA Master") as interface:
 # ==========================================
 lista_de_usuarios = []
 
-# Vaga Master
 if os.environ.get("LOGIN_USUARIO") and os.environ.get("LOGIN_SENHA"):
     lista_de_usuarios.append((os.environ.get("LOGIN_USUARIO"), os.environ.get("LOGIN_SENHA")))
-
-# Vaga Equipe 1
 if os.environ.get("USUARIO_1") and os.environ.get("SENHA_1"):
     lista_de_usuarios.append((os.environ.get("USUARIO_1"), os.environ.get("SENHA_1")))
-
-# Vaga Equipe 2
 if os.environ.get("USUARIO_2") and os.environ.get("SENHA_2"):
     lista_de_usuarios.append((os.environ.get("USUARIO_2"), os.environ.get("SENHA_2")))
+if os.environ.get("USUARIO_3") and os.environ.get("SENHA_3"):
+    lista_de_usuarios.append((os.environ.get("USUARIO_3"), os.environ.get("SENHA_3")))
 
 interface.launch(
     server_name="0.0.0.0", 
     server_port=int(os.environ.get("PORT", 10000)), 
-    auth=lista_de_usuarios,
-    theme=tema_premium,
-    css=css_customizado
+    auth=lista_de_usuarios
 )
