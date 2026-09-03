@@ -17,7 +17,7 @@ from PIL import Image
 from fpdf import FPDF
 from groq import Groq
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_chroma import Chroma
 from langchain_community.tools import DuckDuckGoSearchRun
 from huggingface_hub import InferenceClient
@@ -25,16 +25,20 @@ from huggingface_hub import InferenceClient
 # ==========================================
 # 1. CHAVES MESTRES E CONEXÕES EM NUVEM
 # ==========================================
-# As chaves reais não ficam mais aqui. O Render vai injetar elas com segurança.
 chave_groq = os.environ.get("GROQ_API_KEY")
 chave_hf = os.environ.get("HF_TOKEN")
 
 cliente_groq = Groq(api_key=chave_groq)
 cliente_hf = InferenceClient(token=chave_hf)
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 MODELO_GROQ = "llama-3.3-70b-versatile"
 MODELO_VISAO = "llama-3.2-90b-vision-preview"
 buscador_web = DuckDuckGoSearchRun()
+
+# O TRUQUE: Memória terceirizada na nuvem (Custo e Peso ZERO)
+embeddings = HuggingFaceInferenceAPIEmbeddings(
+    api_key=chave_hf, 
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 
 # ==========================================
 # 2. DIRETÓRIOS DO SERVIDOR (NUVEM)
