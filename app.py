@@ -27,8 +27,8 @@ chave_hf = os.environ.get("HF_TOKEN")
 cliente_groq = Groq(api_key=chave_groq)
 cliente_hf = InferenceClient(token=chave_hf)
 
-# ⬇️ A CORREÇÃO DE ACESSO ESTÁ AQUI ⬇️
-MODELO_GROQ = "llama-3.1-70b-versatile"
+# MOTOR INSTANTÂNEO (Liberado, Imortal e sem Erro 400/404)
+MODELO_GROQ = "llama-3.1-8b-instant"
 MODELO_VISAO = "llama-3.2-90b-vision-preview"
 
 embeddings = HuggingFaceInferenceAPIEmbeddings(
@@ -37,7 +37,7 @@ embeddings = HuggingFaceInferenceAPIEmbeddings(
 )
 
 # ==========================================
-# 2. DIRETÓRIOS
+# 2. DIRETÓRIOS E LOGS
 # ==========================================
 DIRETORIO = "./Central_IA_Master"
 DIR_CHROMA = f"{DIRETORIO}/Banco_de_Dados_Vetorial"
@@ -48,26 +48,32 @@ for d in [DIRETORIO, DIR_CASOS, DIR_MIDIA]:
     os.makedirs(d, exist_ok=True)
 
 # ==========================================
-# 3. EXTRAÇÃO E RENDERIZAÇÃO DA LOGO
+# 3. RENDERIZAÇÃO DA LOGO (RADAR ABSOLUTO)
 # ==========================================
 def renderizar_logo():
-    # Caminho absoluto blindado
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    caminho = os.path.join(base_dir, "chamariz-sem-fundo.jpg")
-    
-    if os.path.exists(caminho):
-        with open(caminho, "rb") as f:
+    # O Radar: Vasculha todas as pastas ignorando maiúsculas e minúsculas
+    caminho_real = None
+    for root, dirs, files in os.walk("."):
+        for f in files:
+            if "chamariz" in f.lower() and "fundo" in f.lower():
+                caminho_real = os.path.join(root, f)
+                break
+        if caminho_real:
+            break
+
+    if caminho_real:
+        with open(caminho_real, "rb") as f:
             encoded = base64.b64encode(f.read()).decode('utf-8')
         return f'''
-        <div style="display: flex; justify-content: center; align-items: center; padding: 15px 0 35px 0;">
-            <img src="data:image/jpeg;base64,{encoded}" style="max-width: 85%; filter: drop-shadow(0px 10px 20px rgba(212, 175, 55, 0.4));">
+        <div style="display: flex; justify-content: center; align-items: center; padding: 10px 0 25px 0;">
+            <img src="data:image/jpeg;base64,{encoded}" style="max-width: 80%; filter: drop-shadow(0px 8px 15px rgba(212, 175, 55, 0.5));">
         </div>
         '''
     else:
         return '''
-        <div style="text-align: center; margin-bottom: 30px; padding: 25px 15px; border-radius: 20px; background: linear-gradient(145deg, #BF953F, #B38728); box-shadow: 0 15px 35px rgba(212,175,55,0.3);">
-            <h1 style="color: #000; font-family: 'Montserrat', sans-serif; font-weight: 900; letter-spacing: 3px; margin: 0; font-size: 20px;">O CÓDIGO</h1>
-            <h1 style="color: #000; font-family: 'Montserrat', sans-serif; font-weight: 900; letter-spacing: 3px; margin: 0; font-size: 20px;">DE OURO</h1>
+        <div style="text-align: center; margin-bottom: 25px; padding: 20px 10px; border-radius: 15px; background: linear-gradient(145deg, #BF953F, #B38728); box-shadow: 0 10px 25px rgba(212,175,55,0.3);">
+            <h1 style="color: #000; font-family: 'Montserrat', sans-serif; font-weight: 900; letter-spacing: 2px; margin: 0; font-size: 18px;">O CÓDIGO</h1>
+            <h1 style="color: #000; font-family: 'Montserrat', sans-serif; font-weight: 900; letter-spacing: 2px; margin: 0; font-size: 18px;">DE OURO</h1>
         </div>
         '''
 
@@ -148,7 +154,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
         return resposta.choices[0].message.content
         
     except Exception as e:
-        return f"⚠️ **Falha no Motor Neural.** Conexão rejeitada. Detalhe: `{str(e)}`"
+        return f"⚠️ **Falha de Conexão.** Detalhe técnico: `{str(e)}`"
 
 def exportar_conversa(historico):
     if not historico: return None
@@ -221,7 +227,7 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
 
 def aprimorar_prompt(sujeito, fundo, estilo, tipo="imagem"):
     if not sujeito: return None
-    instrucao = f"Traduza para INGLÊS. Sujeito: {sujeito} | Fundo: {fundo} | Estilo: {estilo}. Adicione termos: 8k, highly detailed, photorealistic. Responda APENAS o texto em inglês." if tipo=="imagem" else f"Traduza para INGLÊS (MÁX 40 PALAVRAS). Ação: {sujeito} | Fundo: {fundo} | Movimento: {estilo}. Responda APENAS o texto em inglês."
+    instrucao = f"Traduza para INGLÊS. Sujeito: {sujeito} | Fundo: {fundo} | Estilo: {estilo}. Adicione: 8k, highly detailed, photorealistic. Responda APENAS o texto em inglês." if tipo=="imagem" else f"Traduza para INGLÊS (MÁX 40 PALAVRAS). Ação: {sujeito} | Fundo: {fundo} | Movimento: {estilo}. Responda APENAS o texto em inglês."
     try:
         r = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": instrucao}], model=MODELO_GROQ, temperature=0.1).choices[0].message.content.strip()
         if ":" in r and len(r.split(":")[0]) < 20: r = r.split(":", 1)[-1].strip()
@@ -259,54 +265,60 @@ def gerar_backup():
     return cam, "📦 Arquivos Extraídos"
 
 # ==========================================
-# 7. DESIGN SYSTEM V12 (NEUMORFISMO ELITE)
+# 7. DESIGN DE ALTO CONTRASTE (O CÓDIGO DE OURO)
 # ==========================================
 tema_ultra = gr.themes.Base(
     font=[gr.themes.GoogleFont("Montserrat"), "sans-serif"],
 ).set(
-    body_background_fill="#000000",
-    body_background_fill_dark="#000000",
+    body_background_fill="#050505",
+    body_background_fill_dark="#050505",
+    body_text_color="#FFFFFF",
+    body_text_color_dark="#FFFFFF",
+    background_fill_primary="#0A0A0A",
+    background_fill_primary_dark="#0A0A0A",
+    background_fill_secondary="#111111",
+    background_fill_secondary_dark="#111111",
+    border_color_primary="#333333",
+    border_color_primary_dark="#333333",
     block_background_fill="#0A0A0A",
     block_background_fill_dark="#0A0A0A",
-    block_border_width="0px",
-    block_border_width_dark="0px",
-    panel_border_width="0px",
-    panel_border_width_dark="0px",
-    border_color_primary="transparent",
-    border_color_primary_dark="transparent",
-    background_fill_primary="#050505",
-    background_fill_primary_dark="#050505",
-    background_fill_secondary="#0A0A0A",
-    background_fill_secondary_dark="#0A0A0A",
+    block_label_text_color="#D4AF37",
+    block_label_text_color_dark="#D4AF37",
+    block_title_text_color="#D4AF37",
+    block_title_text_color_dark="#D4AF37",
     input_background_fill="#141414",
     input_background_fill_dark="#141414",
-    button_primary_background_fill="linear-gradient(145deg, #BF953F, #FCF6BA, #B38728)",
-    button_primary_background_fill_dark="linear-gradient(145deg, #BF953F, #FCF6BA, #B38728)",
+    input_border_color="#444444",
+    input_border_color_dark="#444444",
+    input_text_color="#FFFFFF",
+    input_text_color_dark="#FFFFFF",
+    button_primary_background_fill="linear-gradient(145deg, #D4AF37, #AA7C11)",
+    button_primary_background_fill_dark="linear-gradient(145deg, #D4AF37, #AA7C11)",
     button_primary_text_color="#000000",
-    button_secondary_background_fill="#111111",
-    button_secondary_background_fill_dark="#111111",
+    button_secondary_background_fill="#1A1A1A",
+    button_secondary_background_fill_dark="#1A1A1A",
     button_secondary_text_color="#D4AF37"
 )
 
 css_ultra = """
-body, .gradio-container { background-color: #000000 !important; color: #E5E7EB !important; font-family: 'Montserrat', sans-serif !important; }
+body, .gradio-container { background-color: #050505 !important; color: #FFFFFF !important; font-family: 'Montserrat', sans-serif !important; }
 footer { display: none !important; }
-* { border-color: transparent !important; }
-.sidebar { background: #050505 !important; box-shadow: 10px 0px 30px rgba(0,0,0,0.9) !important; z-index: 100; padding: 20px !important; }
-.dropdown-menu, .wrap { background: #0A0A0A !important; border-radius: 16px !important; box-shadow: inset 2px 2px 5px #000, inset -2px -2px 5px #111 !important; color: #D4AF37 !important; }
-.label-wrap span { color: #888 !important; letter-spacing: 1px; }
-button { border-radius: 20px !important; text-transform: uppercase; font-weight: 700 !important; letter-spacing: 1px; transition: 0.3s all ease !important; }
-button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.8) !important; }
-button.primary { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4) !important; }
-.tabs { background: transparent !important; }
-.tab-nav { background: #050505 !important; border-radius: 30px !important; padding: 10px !important; margin: 0 20px 30px 20px !important; box-shadow: 5px 5px 15px #000, -5px -5px 15px #111 !important; gap: 15px; }
-.tab-nav button { border-radius: 20px !important; color: #666 !important; padding: 12px 30px !important; }
-.tab-nav button.selected { color: #000 !important; background: linear-gradient(145deg, #BF953F, #B38728) !important; box-shadow: 0 0 20px rgba(212,175,55,0.4) !important; }
-.box-painel { background: linear-gradient(145deg, #0a0a0a, #050505) !important; border-radius: 30px !important; padding: 35px !important; box-shadow: 15px 15px 30px #000000, -5px -5px 20px #111111 !important; margin-bottom: 25px; }
-.chat-container { border-radius: 24px !important; background: #050505 !important; box-shadow: inset 5px 5px 20px #000 !important; }
-.message.bot { background: linear-gradient(145deg, #111, #080808) !important; border-radius: 20px 20px 20px 0 !important; box-shadow: 2px 2px 10px #000 !important; }
-.message.user { background: #1A1A1A !important; border-radius: 20px 20px 0 20px !important; color: #D4AF37 !important; }
-textarea, input[type="text"] { border-radius: 20px !important; background: #0A0A0A !important; padding: 15px !important; color: #FFF !important; box-shadow: inset 3px 3px 10px #000 !important; }
+span, p, label, h1, h2, h3, h4, .markdown-text, .chatbot { color: #F3F4F6 !important; }
+h3 { color: #D4AF37 !important; }
+textarea, input, select, .wrap-inner, .dropdown-menu, .wrap { background-color: #111111 !important; color: #FFFFFF !important; border: 1px solid #333333 !important; border-radius: 12px !important; }
+button { text-transform: uppercase; font-weight: 700 !important; letter-spacing: 1px; transition: 0.3s all ease !important; border-radius: 12px !important; color: #FFFFFF !important; }
+button:hover { transform: translateY(-2px); }
+button.primary { color: #000000 !important; border: none !important; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important; text-shadow: none !important; }
+button.secondary { border: 1px solid #444 !important; background: #111 !important; color: #D4AF37 !important; }
+.tabs { background: transparent !important; border: none !important; }
+.tab-nav { background: #0A0A0A !important; border-bottom: 2px solid #222 !important; padding: 10px 20px 0 !important; gap: 10px; }
+.tab-nav button { color: #888888 !important; padding: 12px 25px !important; border-radius: 10px 10px 0 0 !important; border: none !important; }
+.tab-nav button.selected { color: #D4AF37 !important; border-bottom: 3px solid #D4AF37 !important; background: #111111 !important; }
+.box-painel { background: #0A0A0A !important; border-radius: 16px !important; padding: 30px !important; border: 1px solid #222 !important; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.chat-container { border-radius: 16px !important; background: #0A0A0A !important; border: 1px solid #222 !important; }
+.message.bot { background: #111111 !important; border-left: 3px solid #D4AF37 !important; color: #FFFFFF !important; }
+.message.user { background: #1A1A1A !important; border: 1px solid #333 !important; color: #D4AF37 !important; }
+.sidebar { background: #050505 !important; border-right: 1px solid #222 !important; padding: 25px !important; }
 """
 
 forca_dark_mode = "function() { document.body.classList.add('dark'); }"
