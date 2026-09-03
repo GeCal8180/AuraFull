@@ -92,7 +92,7 @@ def ouvir_microfone(audio_path):
     except Exception as e: return f"Erro: {e}"
 
 # ==========================================
-# 4. CHAT ULTRAMODERNO (CORE)
+# 4. CHAT ULTRAMODERNO (CORE CORRIGIDO)
 # ==========================================
 def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
     texto_usuario = mensagem.get("text", "")
@@ -292,18 +292,25 @@ css_ultra = "footer {display: none !important;} .gradio-container {max-width: 10
 with gr.Blocks(title="Central Master") as interface:
     with gr.Tabs():
         
-        # ABA 1: CHAT PRINCIPAL
+        # ABA 1: CHAT PRINCIPAL (CORRIGIDO E OTIMIZADO)
         with gr.TabItem("💬 IA Master"):
             with gr.Accordion("⚙️ Configurações da Conversa", open=False):
                 with gr.Row():
                     persona_box = gr.Dropdown(choices=["Especialista de Inteligência (Padrão)", "Copywriter Estratégico (Vendas/Ads)", "Consultor de Negócios", "Auditor de Dados", "Diretor de Arte (Design)"], value="Especialista de Inteligência (Padrão)", label="Especialidade", scale=3)
                     net_box = gr.Checkbox(label="🌐 Conectar à Internet", value=False, scale=1)
                     btn_exportar = gr.Button("💾 Baixar Word", variant="secondary", scale=1)
+            
+            # Botões de edição e envio configurados com clareza
             chat = gr.ChatInterface(
-                fn=responder_chat_multimodal, multimodal=True,
+                fn=responder_chat_multimodal, 
+                multimodal=True,
                 additional_inputs=[persona_box, net_box],
-                chatbot=gr.Chatbot(height=650, placeholder="Como posso ajudar no seu projeto hoje?"),
-                textbox=gr.Textbox(placeholder="Mensagem para a IA...", container=False, scale=7)
+                chatbot=gr.Chatbot(height=650, placeholder="Como posso ajudar no seu projeto hoje? (Passe o mouse sobre as mensagens enviadas para ver o botão ✏️ Editar)"),
+                textbox=gr.MultimodalTextbox(placeholder="Digite sua mensagem, anexe arquivos ou imagens aqui...", container=False, scale=7),
+                submit_btn="Enviar 🚀",
+                retry_btn="🔄 Gerar Nova Resposta",
+                undo_btn="✏️ Corrigir Última Mensagem",
+                clear_btn="🗑️ Limpar Chat"
             )
             arq_exportado = gr.File(label="Histórico", visible=False)
             btn_exportar.click(fn=exportar_conversa, inputs=[chat.chatbot], outputs=[arq_exportado]).then(lambda: gr.update(visible=True), None, arq_exportado)
