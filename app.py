@@ -14,6 +14,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_chroma import Chroma
 from huggingface_hub import InferenceClient
+from duckduckgo_search import DDGS  # Motor direto de internet (Sem LangChain)
 
 # ==========================================
 # 1. CHAVES MESTRES E CONEXÕES EM NUVEM
@@ -56,7 +57,7 @@ def listar_arquivos_mortos():
     arquivos.sort(key=os.path.getmtime, reverse=True)
     return arquivos
 
-registrar_log("Sistema Minimalista V6.1 Iniciado.")
+registrar_log("Sistema V6.2 (Com Busca Web) Iniciado.")
 
 # ==========================================
 # 3. EXTRAÇÃO E FUNÇÕES BASE
@@ -102,20 +103,36 @@ def falar_laudo(texto_laudo, pasta_destino):
     return cam_audio
 
 # ==========================================
-# 4. CHAT INTELIGENTE (MOTOR PRINCIPAL)
+# 4. CHAT INTELIGENTE (COM INTERNET)
 # ==========================================
-def responder_chat(mensagem, historico):
-    mensagens = [{"role": "system", "content": "Você é o Assistente Forense Chefe. Comporte-se como uma IA avançada estilo ChatGPT, mas com especialidade em direito, perícia e análise de dados. Responda de forma clara, técnica e objetiva."}]
+def responder_chat(mensagem, historico, usar_internet):
+    contexto_extra = ""
+    
+    # Motor de Busca Ágil
+    if usar_internet:
+        try:
+            resultados = DDGS().text(mensagem, max_results=4)
+            textos_busca = []
+            for r in resultados:
+                textos_busca.append(f"Fonte: {r['title']}\nConteúdo: {r['body']}")
+            contexto_extra = "\n\n[DADOS ATUAIS DA INTERNET]:\n" + "\n\n".join(textos_busca) + "\n\n(Baseie sua resposta nesses dados caso sejam relevantes para a pergunta)."
+        except Exception as e:
+            contexto_extra = f"\n\n[Aviso: Falha temporária na busca web: {e}]"
+
+    mensagens = [{"role": "system", "content": "Você é o Assistente Forense Chefe. Comporte-se como uma IA avançada estilo ChatGPT. Responda de forma clara, técnica e objetiva."}]
+    
     for user_txt, ai_txt in historico:
         mensagens.append({"role": "user", "content": user_txt})
         mensagens.append({"role": "assistant", "content": ai_txt})
-    mensagens.append({"role": "user", "content": mensagem})
+    
+    # Injeta a busca da internet escondida na pergunta do usuário
+    mensagens.append({"role": "user", "content": mensagem + contexto_extra})
     
     resposta = cliente_groq.chat.completions.create(messages=mensagens, model=MODELO_GROQ, max_tokens=2500).choices[0].message.content
     return resposta
 
 # ==========================================
-# 5. DOSSIÊ COMPLEXO
+# 5. DOSSIÊ COMPLEXO (ARQUIVOS)
 # ==========================================
 def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progresso=gr.Progress()):
     if not instrucao: return "⚠️ Faltou instrução", None, None, "", ""
@@ -189,19 +206,20 @@ with gr.Blocks(title="Assistente Forense", theme=tema_chatgpt, css=css_minimalis
     
     with gr.Tabs():
         
-        # ABA 1 AGORA É O CHAT (PÁGINA INICIAL)
+        # ABA 1: CHAT COM INTERNET
         with gr.TabItem("💬 Assistente Forense"):
             chat = gr.ChatInterface(
                 fn=responder_chat,
-                chatbot=gr.Chatbot(height=650, placeholder="Olá, Diretor. Como posso ajudar na investigação hoje?"),
+                additional_inputs=[gr.Checkbox(label="🌐 Buscar na Internet (Tempo Real)", value=False)],
+                chatbot=gr.Chatbot(height=600, placeholder="Olá, Diretor. Como posso ajudar na investigação hoje?"),
                 textbox=gr.Textbox(placeholder="Envie uma mensagem para a IA...", container=False, scale=7)
             )
 
-        # ABA 2 É O COCKPIT PARA DOCUMENTOS PESADOS
-        with gr.TabItem("🔎 Processador de Documentos (Dossiês)"):
+        # ABA 2: PROCESSADOR DE PDFs
+        with gr.TabItem("🔎 Processador de Documentos"):
             with gr.Row():
                 with gr.Column(scale=4, elem_classes="box-painel"):
-                    gr.Markdown("### 📂 Inserir Lote de Evidências")
+                    gr.Markdown("### 📂 Lote de Evidências")
                     arq_up = gr.File(label="PDFs, Excel, Word, Áudios", file_count="multiple")
                     
                     gr.Markdown("### 🎯 Ordem de Serviço")
@@ -211,8 +229,8 @@ with gr.Blocks(title="Assistente Forense", theme=tema_chatgpt, css=css_minimalis
                     mic.stop_recording(fn=ouvir_microfone, inputs=mic, outputs=txt_ordem)
                     
                     with gr.Row():
-                        c_aud = gr.Checkbox(label="🔊 Gerar Laudo em Áudio", value=False)
-                        c_trib = gr.Checkbox(label="⚖️ Modo Debate (Tribunal)", value=False)
+                        c_aud = gr.Checkbox(label="🔊 Áudio", value=False)
+                        c_trib = gr.Checkbox(label="⚖️ Debate", value=False)
                     
                     btn_exe = gr.Button("Gerar Dossiê Oficial", variant="primary", size="lg")
                     btn_limpa = gr.Button("Limpar Memória do Caso", variant="secondary")
