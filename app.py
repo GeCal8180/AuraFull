@@ -162,7 +162,7 @@ def chamar_gigante_openrouter(mensagens):
     return None
 
 # ==========================================
-# 5. EXTRAÇÃO NEURAL SEGURA
+# 5. MÓDULOS DE EXTRAÇÃO E MÍDIA ESTRUTURAL
 # ==========================================
 def extrair_texto(arquivo):
     caminho = arquivo.name if hasattr(arquivo, 'name') else arquivo
@@ -210,32 +210,41 @@ def aprimorar_prompt(sujeito, fundo, estilo):
     user_msg = f"Translate and enhance:\nFocus: {sujeito}\nBackground: {fundo}\nStyle: {estilo}\nAdd tags: 8k resolution, highly detailed, photorealistic."
     try: 
         res = motor_neural_groq([{"role": "system", "content": sys_msg}, {"role": "user", "content": user_msg}], max_tokens=150)
-        if res and not res.startswith("⚠️"): return res.replace('"', '').replace('Here is the prompt:', '').strip()
+        # Se a Groq falhar ou mandar mensagem de erro, ele ignora e retorna o texto puro (fallback absoluto)
+        if res and not res.startswith("⚠️") and "SISTEMA DE CONTINGÊNCIA" not in res: 
+            return res.replace('"', '').replace('Here is the prompt:', '').strip()
         return f"{sujeito}, {fundo}, {estilo}" 
     except: return f"{sujeito}, {fundo}, {estilo}"
 
 def gerar_imagem_estudio(sujeito, fundo, estilo):
-    if not sujeito: return None
+    if not sujeito: return None, "⚠️ O Foco da Composição é obrigatório."
+    if not chave_hf: return None, "⚠️ Chave de API da Hugging Face ausente (HF_TOKEN)."
+    
     c = f"{DIR_MIDIA}/Img_{datetime.now().strftime('%H%M%S')}.jpg"
     try:
         prompt_en = aprimorar_prompt(sujeito, fundo, estilo)
         cliente_hf.text_to_image(prompt_en, model="black-forest-labs/FLUX.1-schnell").save(c)
-        return c
+        return c, "✅ Sucesso"
     except Exception as e: 
-        salvar_na_memoria(f"Falha ao renderizar imagem: {e}", "Erro Mídia")
-        return None
+        erro_str = str(e)
+        salvar_na_memoria(f"Falha Imagem HF: {erro_str}", "Erro Mídia")
+        return None, f"⚠️ Erro de Renderização (Hugging Face): {erro_str[:100]}..."
 
 def gerar_video_ia(imagem_base, sujeito, fundo, movimento):
+    if not chave_hf: return None, "⚠️ Chave de API da Hugging Face ausente (HF_TOKEN)."
     try:
         if imagem_base:
-            return Client("multimodalart/stable-video-diffusion").predict(imagem_base, api_name="/video"), "✅ Cena animada com êxito."
+            return Client("multimodalart/stable-video-diffusion", hf_token=chave_hf).predict(imagem_base, api_name="/video"), "✅ Cena animada."
         if not sujeito: return None, "⚠️ O Sujeito é obrigatório."
+        
         prompt_en = aprimorar_prompt(sujeito, fundo, movimento)
-        try:
-            return Client("multimodalart/zeroscope-v2").predict(prompt_en, api_name="/infer"), "✅ Masterização Finalizada."
+        # Cascata de Video (Redundância 3x)
+        try: return Client("multimodalart/zeroscope-v2", hf_token=chave_hf).predict(prompt_en, api_name="/infer"), "✅ Vídeo (Zeroscope)"
         except:
-            return Client("hysts/ModelScope-Text-To-Video-Synthesis").predict(prompt_en, api_name="/infer"), "✅ Masterização Finalizada (Alternativa)."
-    except Exception as e: return None, f"⚠️ Acesso restrito global: Servidores públicos lotados. {str(e)[:40]}"
+            try: return Client("hysts/ModelScope-Text-To-Video-Synthesis", hf_token=chave_hf).predict(prompt_en, api_name="/infer"), "✅ Vídeo (ModelScope)"
+            except Exception as e2: return None, f"⚠️ APIs de Vídeo HF Lotadas ou Bloqueadas. Erro Técnico: {str(e2)[:60]}"
+    except Exception as e: 
+        return None, f"⚠️ Falha de Conexão com Servidor de Vídeo. Erro: {str(e)[:60]}"
 
 def falar_laudo_estudio(texto):
     if not texto: return None
@@ -257,7 +266,7 @@ def gerar_backup():
     except Exception as e: return None, f"⚠️ Erro ao empacotar: {e}"
 
 # ==========================================
-# 6. MÓDULOS DE CHAT OMNI-COMMAND (COM SANITIZAÇÃO DE DADOS)
+# 6. MÓDULOS DE CHAT OMNI-COMMAND
 # ==========================================
 def disparar_webhook(url, texto_contexto):
     if not url: return "⚠️ Requisito pendente: Informe a URL."
@@ -286,7 +295,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             except: contexto_extra += f"\n\n[AVISO]: Antena Web bloqueada temporariamente."
 
         sys_prompt = f"Você é a Inteligência de Comando do sistema 'O Código de Ouro', atuando como {persona}. "
-        sys_prompt += "DIRETRIZ SUPREMA: Assuma os dados do [MAPEAMENTO WEB] como sendo o presente absoluto, ignorando limitações temporais do seu treinamento base.\n\n"
+        sys_prompt += "DIRETRIZ SUPREMA: Se houver dados marcados como [MAPEAMENTO WEB], assuma-os como a verdade do presente. Não mencione limitações de data.\n\n"
         sys_prompt += "DIRETRIZ DE FORMATAÇÃO (MUITO IMPORTANTE): Você DEVE gerar sua resposta em Markdown estruturado, bonito e legível para humanos (use tabelas, tópicos e quebras de linha reais). É ESTRITAMENTE PROIBIDO retornar a sua resposta em formato JSON, listas ou dicionários de código (Ex: [{'text': ...}]). Nunca use os caracteres literais '\\n', apenas quebre a linha.\n\n"
         sys_prompt += "HABILIDADES OMNI:\n"
         sys_prompt += "- Para criar IMAGEM, adicione: [IMG: prompt descritivo em inglês fotorrealista]\n"
@@ -294,7 +303,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
         sys_prompt += "- Para criar DOCUMENTO, adicione: [DOC: texto completo que vai no documento]"
         
         texto_final = texto_usuario + contexto_extra
-        if imagens and not texto_final.strip(): texto_final = "Realize uma varredura pericial nesta imagem."
+        if imagens and not texto_final.strip(): texto_final = "Realize uma varredura pericial absoluta nesta imagem."
         elif not imagens and not texto_final.strip(): return "⚠️ Terminal ocioso. Insira uma diretriz de comando."
 
         mensagens_ia = [{"role": "system", "content": sys_prompt}]
@@ -322,30 +331,25 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             salvar_na_memoria(f"Falha Chat: {resposta}", "Terminal Erro")
             return resposta if resposta else "⚠️ Falha crítica ao gerar resposta neural."
 
-        # INTERCEPTADOR SANITIZADOR DE DADOS (ANTI-JSON E ANTI-LITERAL NEWLINES)
         resposta_limpa = str(resposta).strip()
-        # Corrige o caso da IA tentar imitar o formato de entrada JSON
         if resposta_limpa.startswith("[{") and "'type':" in resposta_limpa:
             try:
-                # Converte o JSON literal problemático em dicionário Python seguro
                 parsed = ast.literal_eval(resposta_limpa)
                 if isinstance(parsed, list) and len(parsed) > 0 and 'text' in parsed[0]:
                     resposta_limpa = parsed[0]['text']
             except: pass
-        # Força as quebras literais geradas pela IA a se tornarem quebras estruturais visuais reais
         resposta_limpa = resposta_limpa.replace("\\n", "\n")
 
-        # Processadores de Mídia
         if "[IMG:" in resposta_limpa:
             for match in re.finditer(r'\[IMG:\s*(.*?)\]', resposta_limpa, re.IGNORECASE):
                 try:
                     prompt_img = match.group(1)
-                    cam = gerar_imagem_estudio(prompt_img, "", "Fotorrealista 8k")
+                    cam, msg = gerar_imagem_estudio(prompt_img, "", "Fotorrealista 8k")
                     if cam:
                         tag_md = f"\n\n🖼️ **Ativo Visual Renderizado:**\n![Imagem](/file={os.path.abspath(cam)})"
                         resposta_limpa = resposta_limpa.replace(match.group(0), tag_md)
-                    else: resposta_limpa = resposta_limpa.replace(match.group(0), "\n\n⚠️ [Contingência]: Renderizador sobrecarregado.")
-                except: resposta_limpa = resposta_limpa.replace(match.group(0), "")
+                    else: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ {msg}")
+                except Exception as e: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ Erro Visual Córtex: {str(e)[:50]}")
                     
         if "[VID:" in resposta_limpa:
             for match in re.finditer(r'\[VID:\s*(.*?)\]', resposta_limpa, re.IGNORECASE):
@@ -355,8 +359,8 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
                     if cam:
                         tag_html = f"\n\n🎥 **Vídeo Masterizado:**\n<video controls width='100%'><source src='/file={os.path.abspath(cam)}' type='video/mp4'></video>"
                         resposta_limpa = resposta_limpa.replace(match.group(0), tag_html)
-                    else: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ Erro de Vídeo: {msg}")
-                except: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ Motor de Vídeo Offline.")
+                    else: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ {msg}")
+                except Exception as e: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ Erro Vídeo Córtex: {str(e)[:50]}")
                     
         if "[DOC:" in resposta_limpa:
             try:
@@ -399,8 +403,7 @@ def executar_agente_mestre(objetivo, progresso=gr.Progress()):
         try:
             match = re.search(r'\[IMAGEM:\s*(.*?)\]', estrategia, re.IGNORECASE)
             resposta_limpa = re.sub(r'\[IMAGEM:\s*(.*?)\]', '', estrategia, flags=re.IGNORECASE).strip()
-            cam_img = f"{DIR_MIDIA}/Agente_{datetime.now().strftime('%H%M%S')}.jpg"
-            cliente_hf.text_to_image(match.group(1).strip() if match else f"High-end corporate asset for {objetivo}, 8k", model="black-forest-labs/FLUX.1-schnell").save(cam_img)
+            cam_img, msg = gerar_imagem_estudio(match.group(1).strip() if match else f"Corporate asset for {objetivo}", "", "")
         except: resposta_limpa = estrategia 
         
         salvar_na_memoria(objetivo[:50], "Agente Autônomo")
@@ -445,8 +448,7 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
             try:
                 match = re.search(r'\[IMAGEM:\s*(.*?)\]', resposta, re.IGNORECASE)
                 resposta_limpa = re.sub(r'\[IMAGEM:\s*(.*?)\]', '', resposta, flags=re.IGNORECASE).strip()
-                cam_img = f"{pasta}/Capa.jpg"
-                cliente_hf.text_to_image(match.group(1).strip() if match else "Dark luxury corporate dossier cover", model="black-forest-labs/FLUX.1-schnell").save(cam_img)
+                cam_img, msg = gerar_imagem_estudio(match.group(1).strip() if match else "Corporate dossier cover", "", "")
             except: resposta_limpa = resposta
         
         progresso(0.9, desc="Compilando Docx...")
@@ -471,8 +473,16 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
         return "✅ Auditoria Completa", cam_word, cam_audio, resposta_limpa, f"📊 MÉTRICA: {palavras} palavras processadas."
     except Exception as e: return f"⚠️ Falha de Segurança Operacional: {e}", None, None, "", ""
 
+def estúdio_interface_img(sujeito, fundo, estilo):
+    cam, msg = gerar_imagem_estudio(sujeito, fundo, estilo)
+    return cam
+
+def estúdio_interface_vid(imagem_base, sujeito, fundo, movimento):
+    cam, msg = gerar_video_ia(imagem_base, sujeito, fundo, movimento)
+    return cam, msg
+
 # ==========================================
-# 8. DESIGN SYSTEM ALTO LUXO (COM SCROLL FIXO)
+# 8. DESIGN SYSTEM ALTO LUXO
 # ==========================================
 tema_ultra = gr.themes.Base(
     font=[gr.themes.GoogleFont("Outfit"), gr.themes.GoogleFont("Inter"), "sans-serif"],
@@ -500,7 +510,6 @@ tbody td, td { background-color: #121212 !important; color: #F5F5F7 !important; 
 tbody tr:hover td { background-color: #1A1A1A !important; }
 .cell-wrap input { color: #F5F5F7 !important; background-color: transparent !important; }
 
-/* TRAVA DE SCROLL PARA TEXTO DO CHAT */
 .chat-container textarea { max-height: 120px !important; overflow-y: auto !important; }
 
 code, pre { background-color: #181818 !important; color: #D4AF37 !important; border: 1px solid #2A2A2A !important; border-radius: 6px !important; }
@@ -605,7 +614,7 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
                     img_estilo = gr.Dropdown(choices=["Fotorrealista 8k", "Cinematic Dark", "Estúdio Minimalista", "Luxo Corporativo"], label="Filtro Estético", value="Fotorrealista 8k")
                     btn_gerar_img = gr.Button("RENDERIZAR COMPOSIÇÃO VISUAL", variant="primary")
                     out_img_est = gr.Image(label="Matriz Extraída", type="filepath")
-                    btn_gerar_img.click(fn=gerar_imagem_estudio, inputs=[img_sujeito, img_fundo, img_estilo], outputs=[out_img_est])
+                    btn_gerar_img.click(fn=estúdio_interface_img, inputs=[img_sujeito, img_fundo, img_estilo], outputs=[out_img_est])
                 
                 with gr.Column(elem_classes="box-painel"):
                     gr.HTML("<h3 style='color: #D4AF37;'>🎥 DIREÇÃO DE CINEMA IA</h3><p style='color: #888; font-size: 12px; margin-top: -5px; margin-bottom: 10px;'>Animação neural e síntese de movimento em alta definição.</p>")
@@ -616,7 +625,7 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
                     btn_gerar_vid = gr.Button("INICIAR MASTERIZAÇÃO EM VÍDEO", variant="primary")
                     out_vid = gr.Video(label="Arquivo Máster de Saída (MP4)")
                     msg_vid = gr.Textbox(show_label=False, interactive=False)
-                    btn_gerar_vid.click(fn=gerar_video_ia, inputs=[vid_base, vid_acao, vid_fundo, vid_mov], outputs=[out_vid, msg_vid])
+                    btn_gerar_vid.click(fn=estúdio_interface_vid, inputs=[vid_base, vid_acao, vid_fundo, vid_mov], outputs=[out_vid, msg_vid])
             
             with gr.Row():
                 with gr.Column(elem_classes="box-painel"):
