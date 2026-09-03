@@ -264,9 +264,9 @@ tema_ultra = gr.themes.Soft(
     block_background_fill="#FFFFFF", block_background_fill_dark="#1F2937",
     border_color_primary="#E5E7EB", border_color_primary_dark="#374151",
     block_border_width="1px", 
-    button_primary_background_fill="#C89B3C",      # Dourado Principal (Estilo Logo)
-    button_primary_background_fill_dark="#B8860B", # Dourado Escuro para Dark Mode
-    button_primary_text_color="#FFFFFF"            # Texto Branco para Contraste
+    button_primary_background_fill="#C89B3C",      
+    button_primary_background_fill_dark="#B8860B", 
+    button_primary_text_color="#FFFFFF"            
 )
 
 css_ultra = """
@@ -282,9 +282,9 @@ footer {display: none !important;}
 
 with gr.Blocks(title="Central Master", theme=tema_ultra, css=css_ultra, fill_width=True) as interface:
     
-    # === MENU LATERAL COM LOGO ===
+    # === MENU LATERAL COM LOGO (CORRIGIDO) ===
     with gr.Sidebar(open=True):
-        gr.Image("chamariz-sem-fundo.jpg", show_label=False, show_download_button=False, container=False)
+        gr.Image("chamariz-sem-fundo.jpg", show_label=False, container=False)
         gr.Markdown("## 🧠 Central IA\n*Painel de Controle*")
         gr.Divider()
         
@@ -380,4 +380,5 @@ for i in ["", "_1", "_2", "_3"]:
     u, s = os.environ.get(f"LOGIN_USUARIO{i}" if i=="" else f"USUARIO{i}"), os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
     if u and s: lista_de_usuarios.append((u, s))
 
-interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_de_usuarios, theme=tema_ultra, css=css_ultra)
+# A remoção do theme e css do comando final é feita aqui pelo Gradio (ele herda da construção dos Blocks).
+interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_de_usuarios)
