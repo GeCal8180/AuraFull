@@ -11,6 +11,7 @@ import time
 import base64
 import sqlite3
 import requests
+import io
 from datetime import datetime
 from groq import Groq
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -24,12 +25,11 @@ from duckduckgo_search import DDGS
 # ==========================================
 chave_groq = os.environ.get("GROQ_API_KEY")
 chave_hf = os.environ.get("HF_TOKEN")
-chave_openrouter = os.environ.get("OPENROUTER_API_KEY") # O Passaporte para o Gigante
+chave_openrouter = os.environ.get("OPENROUTER_API_KEY")
 
 cliente_groq = Groq(api_key=chave_groq)
 cliente_hf = InferenceClient(token=chave_hf)
 
-# MOTOR DE CHOQUE (Velocidade e Visão via Groq)
 MODELO_GROQ_RAPIDO = "llama-3.1-8b-instant"
 MODELO_VISAO = "llama-3.2-90b-vision-preview"
 
@@ -76,9 +76,9 @@ def renderizar_logo():
     if caminho_real:
         with open(caminho_real, "rb") as f:
             encoded = base64.b64encode(f.read()).decode('utf-8')
-        return f'''<div style="display: flex; justify-content: center; align-items: center; padding: 10px 0 25px 0;"><img src="data:image/jpeg;base64,{encoded}" style="max-width: 80%; filter: drop-shadow(0px 8px 15px rgba(212, 175, 55, 0.5));"></div>'''
+        return f'''<div style="display: flex; justify-content: center; align-items: center; padding: 15px 0 30px 0;"><img src="data:image/jpeg;base64,{encoded}" style="max-width: 75%; filter: drop-shadow(0px 8px 20px rgba(212, 175, 55, 0.4));"></div>'''
     else:
-        return '''<div style="text-align: center; margin-bottom: 25px; padding: 20px 10px; border-radius: 15px; background: linear-gradient(145deg, #BF953F, #B38728); box-shadow: 0 10px 25px rgba(212,175,55,0.3);"><h1 style="color: #000; font-family: 'Montserrat', sans-serif; font-weight: 900; letter-spacing: 2px; margin: 0; font-size: 18px;">O CÓDIGO DE OURO</h1></div>'''
+        return '''<div style="text-align: center; margin-bottom: 30px; padding: 25px 10px; border-radius: 12px; background: linear-gradient(145deg, #BF953F, #B38728); box-shadow: 0 10px 25px rgba(212,175,55,0.2);"><h1 style="color: #000; font-family: 'Outfit', sans-serif; font-weight: 800; letter-spacing: 4px; margin: 0; font-size: 20px;">O CÓDIGO DE OURO</h1></div>'''
 
 def encode_image(image_path):
     with open(image_path, "rb") as image_file: return base64.b64encode(image_file.read()).decode('utf-8')
@@ -89,9 +89,31 @@ def extrair_texto(arquivo):
     texto = ""
     try:
         if nome.endswith('.pdf'):
-            with pdfplumber.open(caminho) as pdf: texto += "\n".join([p.extract_text() for p in pdf.pages if p.extract_text()])
+            with pdfplumber.open(caminho) as pdf:
+                for p in pdf.pages:
+                    txt_digital = p.extract_text()
+                    if txt_digital and len(txt_digital.strip()) > 30:
+                        texto += txt_digital + "\n"
+                    else:
+                        try:
+                            img = p.to_image(resolution=150).original
+                            buffer = io.BytesIO()
+                            img.save(buffer, format="JPEG")
+                            img_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                            msg = [{"role": "user", "content": [{"type": "text", "text": "Extract all readable text from this document image."}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}]}]
+                            resp = cliente_groq.chat.completions.create(model=MODELO_VISAO, messages=msg, max_tokens=1024, temperature=0.1)
+                            texto += resp.choices[0].message.content + "\n"
+                            time.sleep(0.5)
+                        except: pass
         elif nome.endswith(('.xlsx', '.csv')): texto = (pd.read_excel(caminho) if nome.endswith('.xlsx') else pd.read_csv(caminho)).to_string() 
         elif nome.endswith('.docx'): texto += "\n".join([p.text for p in docx.Document(caminho).paragraphs])
+        elif nome.endswith(('.png', '.jpg', '.jpeg', '.webp')):
+            try:
+                img_b64 = encode_image(caminho)
+                msg = [{"role": "user", "content": [{"type": "text", "text": "Extraia dados detalhados desta imagem."}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}]}]
+                resp = cliente_groq.chat.completions.create(model=MODELO_VISAO, messages=msg, max_tokens=1500, temperature=0.1)
+                texto += f"[IMAGEM: {os.path.basename(caminho)}]\n" + resp.choices[0].message.content + "\n"
+            except: pass
     except: pass
     return texto
 
@@ -102,32 +124,25 @@ def limpar_banco_de_dados():
     except Exception as e: return f"Erro: {e}"
 
 # ==========================================
-# 4. CONECTOR DO CÉREBRO GIGANTE (OPENROUTER FREE)
+# 5. CHAT E WEBHOOKS
 # ==========================================
 def chamar_gigante_openrouter(mensagens):
     if not chave_openrouter: return None
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {"Authorization": f"Bearer {chave_openrouter}", "Content-Type": "application/json", "HTTP-Referer": "https://ocodigodeouro.com", "X-Title": "O Codigo de Ouro"}
-    payload = {
-        "model": "meta-llama/llama-3.3-70b-instruct:free", # O modelo de 70 Bilhões 100% Gratuito
-        "messages": mensagens,
-        "max_tokens": 4000
-    }
+    payload = {"model": "meta-llama/llama-3.3-70b-instruct:free", "messages": mensagens, "max_tokens": 4000}
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=40)
         if r.status_code == 200: return r.json()["choices"][0]["message"]["content"]
         return None
     except: return None
 
-# ==========================================
-# 5. CHAT HÍBRIDO E WEBHOOKS
-# ==========================================
 def disparar_webhook(url, texto_contexto):
-    if not url: return "⚠️ Informe a URL do Webhook (Make/Zapier)."
-    if not texto_contexto: return "⚠️ Não há dados recentes para enviar."
+    if not url: return "⚠️ Informe a URL do Webhook."
+    if not texto_contexto: return "⚠️ Não há dados recentes."
     try:
         r = requests.post(url, json={"sistema": "O Código de Ouro", "dados": texto_contexto, "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
-        return "✅ Transmissão bem-sucedida! Dados enviados ao sistema externo." if r.status_code == 200 else f"✅ Comando disparado (Status: {r.status_code})"
+        return "✅ Transmissão bem-sucedida!" if r.status_code == 200 else f"✅ Comando disparado (Status: {r.status_code})"
     except Exception as e: return f"⚠️ Falha de transmissão: {e}"
 
 def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
@@ -146,18 +161,16 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             try: contexto_extra += "\n\n[DADOS WEB]:\n" + "\n".join([f"Fonte: {r['title']} - Resumo: {r['body']}" for r in DDGS().text(texto_usuario, max_results=3)])
             except: pass
 
-        sys_prompt = f"Você atua no sistema de elite 'O Código de Ouro' e é um {persona}. Responda com excelência absoluta, foco comercial e tom majestoso."
+        sys_prompt = f"Você atua no sistema de elite 'O Código de Ouro' e é um {persona}. Responda com excelência absoluta, foco em performance comercial e tom majestoso."
         texto_final = texto_usuario + contexto_extra
         
         if imagens and not texto_final.strip(): texto_final = "Analise esta imagem em detalhes absolutos."
-        elif not imagens and not texto_final.strip(): return "⚠️ Operação cancelada. Insira um comando."
+        elif not imagens and not texto_final.strip(): return "⚠️ Insira um comando."
 
-        # TENTATIVA 1: MODO GIGANTE (Se tiver chave do OpenRouter e não for imagem)
         if chave_openrouter and not imagens:
             mensagens_gigante = [{"role": "system", "content": sys_prompt}]
             for item in historico:
-                if isinstance(item, dict) and item.get("content"):
-                    mensagens_gigante.append({"role": item.get("role"), "content": str(item.get("content"))})
+                if isinstance(item, dict) and item.get("content"): mensagens_gigante.append({"role": item.get("role"), "content": str(item.get("content"))})
                 elif isinstance(item, (list, tuple)) and len(item) == 2:
                     if item[0]: mensagens_gigante.append({"role": "user", "content": str(item[0])})
                     if item[1]: mensagens_gigante.append({"role": "assistant", "content": str(item[1])})
@@ -165,10 +178,9 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             
             resposta = chamar_gigante_openrouter(mensagens_gigante)
             if resposta: 
-                salvar_na_memoria(f"USER: {texto_usuario}\nIA: {resposta}", "Chat (Modo Gigante)")
+                salvar_na_memoria(f"USER: {texto_usuario}\nIA: {resposta}", "Chat (Gigante)")
                 return resposta
 
-        # TENTATIVA 2: MODO RÁPIDO/VISÃO (Fallback perfeito e indestrutível)
         mensagens_groq = [{"role": "system", "content": sys_prompt}]
         for item in historico:
             if isinstance(item, dict) and item.get("content"): mensagens_groq.append({"role": item.get("role"), "content": str(item.get("content"))})
@@ -186,10 +198,10 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
             modelo = MODELO_GROQ_RAPIDO
 
         resposta = cliente_groq.chat.completions.create(messages=mensagens_groq, model=modelo, max_tokens=3000).choices[0].message.content
-        salvar_na_memoria(f"USER: {texto_usuario}\nIA: {resposta}", "Chat (Modo Rápido)")
+        salvar_na_memoria(f"USER: {texto_usuario}\nIA: {resposta}", "Chat (Híbrido)")
         return resposta
         
-    except Exception as e: return f"⚠️ **Falha Crítica do Motor.** Detalhe técnico: `{str(e)}`"
+    except Exception as e: return f"⚠️ **Falha de Conexão.** Detalhe técnico: `{str(e)}`"
 
 def exportar_conversa(historico):
     if not historico: return None
@@ -200,13 +212,13 @@ def exportar_conversa(historico):
     doc.add_heading('Protocolo - O Código de Ouro', 0)
     for item in historico:
         if isinstance(item, dict):
-            doc.add_heading("Você:" if item.get("role") == "user" else "O Código de Ouro:", level=2)
+            doc.add_heading("Usuário:" if item.get("role") == "user" else "O Código de Ouro:", level=2)
             doc.add_paragraph(str(item.get("content")))
     doc.save(cam_word)
     return cam_word
 
 # ==========================================
-# 6. AGENTE MESTRE AUTÔNOMO (COM MODO GIGANTE)
+# 6. AGENTE MESTRE, DOSSIÊ E ESTÚDIO
 # ==========================================
 def executar_agente_mestre(objetivo, progresso=gr.Progress()):
     if not objetivo: return "⚠️ Defina um objetivo.", None
@@ -234,9 +246,6 @@ def executar_agente_mestre(objetivo, progresso=gr.Progress()):
         return resposta_limpa, cam_img
     except Exception as e: return f"⚠️ Erro no Agente: {str(e)}", None
 
-# ==========================================
-# 7. ESTÚDIO E DOSSIÊ DE AUDITORIA
-# ==========================================
 def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progresso=gr.Progress()):
     if not instrucao: return "⚠️ Faltou instrução", None, None, "", ""
     palavras = 0
@@ -249,30 +258,43 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
         
         if arquivos:
             for arq in arquivos:
-                txt = extrair_texto(arq)
+                txt = extrair_texto(arq) 
                 palavras += len(txt.split())
                 banco.add_texts([f"[FONTE: {os.path.basename(arq.name)}]\n{c}" for c in fatiador.split_text(txt)])
             
         progresso(0.5, desc="Sintetizando Ouro...")
         contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
-        prompt = f"Analise como sistema O Código de Ouro.\nDADOS: {contexto}\nAÇÃO: {instrucao}"
+        regra_tribunal = "\n[SISTEMA DE DUPLA CHECAGEM]: Atue como Auditor Implacável. Se houver divergências ou erros lógicos nos dados extraídos, aponte-os em uma seção '⚠️ ALERTA DE DIVERGÊNCIA'." if usar_tribunal else ""
+        regra_imagem = "\nNo final, escreva: [IMAGEM: descreva em INGLÊS uma cena fotorrealista para este conteúdo]" if usar_img else ""
+        
+        prompt = f"Analise como inteligência primária do sistema O Código de Ouro.\nDADOS: {contexto}\nAÇÃO: {instrucao}{regra_tribunal}{regra_imagem}"
         
         resposta = chamar_gigante_openrouter([{"role": "user", "content": prompt}]) if chave_openrouter else None
         if not resposta: resposta = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ_RAPIDO, max_tokens=4000).choices[0].message.content
         
+        cam_img = None
+        if usar_img:
+            progresso(0.8, desc="Renderizando Arte...")
+            match = re.search(r'\[IMAGEM:\s*(.*?)\]', resposta, re.IGNORECASE)
+            resposta_limpa = re.sub(r'\[IMAGEM:\s*(.*?)\]', '', resposta, flags=re.IGNORECASE).strip()
+            cam_img = f"{pasta}/Capa_Projeto.jpg"
+            cliente_hf.text_to_image(match.group(1).strip() if match else "Corporate cover, gold", model="black-forest-labs/FLUX.1-schnell").save(cam_img)
+        else: resposta_limpa = resposta
+
         progresso(0.9, desc="Exportando...")
         cam_word = f"{pasta}/Relatorio_Codigo_de_Ouro.docx"
         doc = docx.Document()
         doc.add_heading('Relatório - O Código de Ouro', 0)
-        doc.add_paragraph(resposta)
+        if cam_img: doc.add_picture(cam_img, width=Inches(6.0))
+        doc.add_paragraph(resposta_limpa)
         doc.save(cam_word)
-        salvar_na_memoria(resposta, "Auditoria")
+        salvar_na_memoria(resposta_limpa, "Auditoria")
         
         cam_audio = f"{pasta}/Audio_Codigo_Ouro.mp3"
         if usar_aud:
-            with open(f"{pasta}/temp.txt", "w", encoding="utf-8") as f: f.write(resposta[:3000].replace('*', ''))
+            with open(f"{pasta}/temp.txt", "w", encoding="utf-8") as f: f.write(resposta_limpa[:3000].replace('*', ''))
             os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "{pasta}/temp.txt" --write-media "{cam_audio}"')
-        return "✅ Auditoria Concluída", cam_word, cam_audio if usar_aud else None, resposta, f"📊 STATUS: {palavras} palavras auditadas."
+        return "✅ Auditoria Concluída", cam_word, cam_audio if usar_aud else None, resposta_limpa, f"📊 STATUS: {palavras} palavras validadas."
     except Exception as e: return f"Erro crítico: {e}", None, None, "", ""
 
 def aprimorar_prompt(sujeito, fundo, estilo):
@@ -301,66 +323,92 @@ def gerar_backup():
     return cam, "📦 Arquivos Extraídos"
 
 # ==========================================
-# 8. DESIGN SYSTEM ALTO CONTRASTE (O CÓDIGO DE OURO)
+# 7. TIPOGRAFIA DE ELITE E DESIGN SYSTEM
 # ==========================================
-tema_ultra = gr.themes.Base(font=[gr.themes.GoogleFont("Montserrat"), "sans-serif"]).set(
-    body_background_fill="#050505", body_background_fill_dark="#050505", body_text_color="#FFFFFF", body_text_color_dark="#FFFFFF",
-    background_fill_primary="#0A0A0A", background_fill_primary_dark="#0A0A0A", background_fill_secondary="#111111", background_fill_secondary_dark="#111111",
-    border_color_primary="#333333", border_color_primary_dark="#333333",
-    block_background_fill="#0A0A0A", block_background_fill_dark="#0A0A0A",
-    block_label_text_color="#D4AF37", block_label_text_color_dark="#D4AF37",
-    input_background_fill="#141414", input_background_fill_dark="#141414", input_border_color="#444444", input_border_color_dark="#444444",
+# A importação das Fontes Google (Outfit para Títulos e Inter para Textos)
+tema_ultra = gr.themes.Base(
+    font=[gr.themes.GoogleFont("Outfit"), gr.themes.GoogleFont("Inter"), "sans-serif"],
+).set(
+    body_background_fill="#070707", body_background_fill_dark="#070707", 
+    body_text_color="#F5F5F7", body_text_color_dark="#F5F5F7", # Branco Pérola Premium
+    background_fill_primary="#0D0D0D", background_fill_primary_dark="#0D0D0D", 
+    background_fill_secondary="#111111", background_fill_secondary_dark="#111111",
+    border_color_primary="#2A2A2A", border_color_primary_dark="#2A2A2A",
+    block_background_fill="#0D0D0D", block_background_fill_dark="#0D0D0D",
+    block_label_text_color="#C5A059", block_label_text_color_dark="#C5A059", # Ouro Envelhecido
+    block_title_text_color="#D4AF37", block_title_text_color_dark="#D4AF37", 
+    input_background_fill="#121212", input_background_fill_dark="#121212", # Fundo Onyx para Inputs
+    input_border_color="#333333", input_border_color_dark="#333333",
     button_primary_background_fill="linear-gradient(145deg, #D4AF37, #AA7C11)", button_primary_background_fill_dark="linear-gradient(145deg, #D4AF37, #AA7C11)",
-    button_primary_text_color="#000000", button_secondary_background_fill="#1A1A1A", button_secondary_text_color="#D4AF37"
+    button_primary_text_color="#000000", button_secondary_background_fill="#181818", button_secondary_text_color="#C5A059"
 )
 
 css_ultra = """
-body, .gradio-container { background-color: #050505 !important; color: #FFFFFF !important; font-family: 'Montserrat', sans-serif !important; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;800&display=swap');
+
+body, .gradio-container { background-color: #070707 !important; color: #F5F5F7 !important; font-family: 'Inter', sans-serif !important; }
+h1, h2, h3, h4, h5, h6, .tab-nav button { font-family: 'Outfit', sans-serif !important; font-weight: 600 !important; }
+
 footer { display: none !important; }
-span, p, label, h1, h2, h3, h4, .markdown-text, .chatbot { color: #F3F4F6 !important; }
-h3 { color: #D4AF37 !important; }
-input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #111111 inset !important; -webkit-text-fill-color: #FFFFFF !important; }
-textarea, input, select, .wrap-inner, .dropdown-menu, .wrap { background-color: #111111 !important; color: #FFFFFF !important; border: 1px solid #333333 !important; border-radius: 12px !important; }
-button { text-transform: uppercase; font-weight: 700 !important; letter-spacing: 1px; transition: 0.3s all ease !important; border-radius: 12px !important; color: #FFFFFF !important; }
+
+/* Controles de Contraste Fino */
+p, label, .markdown-text, .chatbot { color: #E0E0E0 !important; font-size: 1.02rem !important; line-height: 1.6 !important; }
+h3 { color: #C5A059 !important; letter-spacing: 1px; }
+
+/* Inputs e Caixas de Texto com Legibilidade Absoluta */
+input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #121212 inset !important; -webkit-text-fill-color: #F5F5F7 !important; }
+textarea, input, select, .wrap-inner, .dropdown-menu, .wrap { background-color: #121212 !important; color: #F5F5F7 !important; border: 1px solid #333333 !important; border-radius: 8px !important; font-family: 'Inter', sans-serif !important; }
+textarea::placeholder, input::placeholder { color: #555555 !important; }
+
+/* Botões do Sistema Deus */
+button { text-transform: uppercase; font-weight: 700 !important; letter-spacing: 1.5px !important; transition: 0.3s all ease !important; border-radius: 8px !important; }
 button:hover { transform: translateY(-2px); }
-button.primary { color: #000000 !important; border: none !important; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important; text-shadow: none !important; }
-button.secondary { border: 1px solid #444 !important; background: #111 !important; color: #D4AF37 !important; }
+button.primary { color: #000000 !important; border: none !important; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25) !important; text-shadow: none !important; font-family: 'Outfit', sans-serif !important; }
+button.secondary { border: 1px solid #3A3A3A !important; background: #181818 !important; color: #D4AF37 !important; font-family: 'Outfit', sans-serif !important; }
+
+/* Estrutura Superior e Navegação */
 .tabs { background: transparent !important; border: none !important; }
-.tab-nav { background: #0A0A0A !important; border-bottom: 2px solid #222 !important; padding: 10px 20px 0 !important; gap: 10px; }
-.tab-nav button { color: #888888 !important; padding: 12px 25px !important; border-radius: 10px 10px 0 0 !important; border: none !important; }
-.tab-nav button.selected { color: #D4AF37 !important; border-bottom: 3px solid #D4AF37 !important; background: #111111 !important; }
-.box-painel { background: #0A0A0A !important; border-radius: 16px !important; padding: 30px !important; border: 1px solid #222 !important; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-.chat-container { border-radius: 16px !important; background: #0A0A0A !important; border: 1px solid #222 !important; }
-.message.bot { background: #111111 !important; border-left: 3px solid #D4AF37 !important; color: #FFFFFF !important; }
-.message.user { background: #1A1A1A !important; border: 1px solid #333 !important; color: #D4AF37 !important; }
-.sidebar { background: #050505 !important; border-right: 1px solid #222 !important; padding: 25px !important; }
+.tab-nav { background: transparent !important; border-bottom: 1px solid #222 !important; padding: 0 20px !important; gap: 15px; justify-content: flex-start !important; }
+.tab-nav button { color: #666666 !important; padding: 15px 25px !important; border-radius: 0 !important; border: none !important; background: transparent !important; border-bottom: 2px solid transparent !important; }
+.tab-nav button.selected { color: #D4AF37 !important; border-bottom: 2px solid #D4AF37 !important; background: transparent !important; text-shadow: 0 0 10px rgba(212,175,55,0.3) !important; }
+
+/* Painéis Flutuantes de Vidro Escuro */
+.box-painel { background: #0D0D0D !important; border-radius: 12px !important; padding: 30px !important; border: 1px solid #1F1F1F !important; margin-bottom: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
+
+/* Interface do Chatbot de Luxo */
+.chat-container { border-radius: 12px !important; background: #0A0A0A !important; border: 1px solid #222 !important; }
+.message.bot { background: #111111 !important; border-left: 2px solid #D4AF37 !important; color: #F5F5F7 !important; border-radius: 0 12px 12px 0 !important; }
+.message.user { background: #181818 !important; border: 1px solid #2A2A2A !important; color: #C5A059 !important; border-radius: 12px 12px 0 12px !important; }
+
+/* Sidebar Premium */
+.sidebar { background: #070707 !important; border-right: 1px solid #1F1F1F !important; padding: 25px !important; }
 """
 
 with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_width=True, js="function() { document.body.classList.add('dark'); }") as interface:
     
     with gr.Sidebar(open=True):
         gr.HTML(renderizar_logo())
-        status_cerebro = "🔵 **Modo Gigante (70B+)**" if os.environ.get("OPENROUTER_API_KEY") else "🟢 **Modo Rápido (8B)**"
-        gr.HTML("<h3 style='text-align: center; color: #D4AF37; text-transform: uppercase; font-size: 10px; letter-spacing: 3px; margin-bottom: 20px;'>Inteligência Suprema</h3>")
+        status_cerebro = "🔵 **Módulo: 70 Bilhões de Parâmetros**" if os.environ.get("OPENROUTER_API_KEY") else "🟢 **Módulo: Inteligência Instantânea**"
+        gr.HTML("<h3 style='text-align: center; color: #555; text-transform: uppercase; font-size: 11px; letter-spacing: 4px; margin-bottom: 20px;'>Inteligência Suprema</h3>")
         
         with gr.Accordion("⚙️ Engine Operacional", open=False):
             gr.Markdown(f"{status_cerebro}")
-            persona_box = gr.Dropdown(choices=["Assessor Gold (Padrão)", "Estrategista de Vendas", "Auditor de Negócios"], value="Assessor Gold (Padrão)", show_label=False)
-            net_box = gr.Checkbox(label="🌐 Conexão Web", value=False)
-            btn_limpa = gr.Button("🧹 Limpar Cache", variant="secondary")
+            persona_box = gr.Dropdown(choices=["Assessor Gold (Padrão)", "Estrategista de Vendas", "Auditor de Negócios", "Diretor Criativo"], value="Assessor Gold (Padrão)", show_label=False)
+            net_box = gr.Checkbox(label="🌐 Conexão Web (Busca em Tempo Real)", value=False)
+            btn_limpa = gr.Button("🧹 Purgar Memória", variant="secondary")
             msg_sys = gr.Textbox(show_label=False, interactive=False)
             btn_limpa.click(fn=limpar_banco_de_dados, outputs=msg_sys)
         
-        with gr.Accordion("📡 Automação (Webhooks)", open=False):
-            gr.Markdown("*Integração com Make.com ou Zapier*")
-            url_webhook = gr.Textbox(placeholder="Cole a URL do Webhook aqui...", show_label=False)
-            texto_export = gr.Textbox(placeholder="Texto a enviar...", lines=2, show_label=False)
-            btn_web = gr.Button("Transmitir Dados", variant="primary")
+        with gr.Accordion("📡 Webhooks de Automação", open=False):
+            gr.Markdown("*Transmissão de dados via Zapier/Make*")
+            url_webhook = gr.Textbox(placeholder="URL do Webhook...", show_label=False)
+            texto_export = gr.Textbox(placeholder="Conteúdo a ser enviado...", lines=2, show_label=False)
+            btn_web = gr.Button("Disparar Transmissão", variant="primary")
             msg_web = gr.Textbox(show_label=False, interactive=False)
             btn_web.click(fn=disparar_webhook, inputs=[url_webhook, texto_export], outputs=msg_web)
 
-        gr.HTML("<hr style='border: none; border-bottom: 1px solid #222; margin: 20px 0;'>")
-        btn_back = gr.Button("📦 Baixar Backup Geral", variant="primary")
+        gr.HTML("<hr style='border: none; border-bottom: 1px solid #1F1F1F; margin: 30px 0;'>")
+        btn_back = gr.Button("📦 Extrair Cofre Geral", variant="primary")
         msg_b = gr.Textbox(show_label=False)
         arq_b = gr.File(label="Arquivo", visible=False)
         btn_back.click(fn=gerar_backup, outputs=[arq_b, msg_b]).then(lambda: gr.update(visible=True), None, arq_b)
@@ -370,55 +418,12 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
         with gr.TabItem("🧠 O CÓDIGO DE OURO"):
             chat = gr.ChatInterface(
                 fn=responder_chat_multimodal, multimodal=True, additional_inputs=[persona_box, net_box],
-                chatbot=gr.Chatbot(height="72vh", show_label=False, placeholder="SISTEMA ATIVO. QUAL A DIRETRIZ?"),
-                textbox=gr.MultimodalTextbox(placeholder="Comandos, arquivos ou links...", container=False, scale=7, show_label=False)
+                chatbot=gr.Chatbot(height="70vh", show_label=False, placeholder="SISTEMA ATIVO. INSIRA SUA DIRETRIZ."),
+                textbox=gr.MultimodalTextbox(placeholder="Comandos estratégicos, planilhas, PDFs ou imagens...", container=False, scale=7, show_label=False)
             )
 
         with gr.TabItem("🤖 AGENTE MESTRE"):
             with gr.Row():
                 with gr.Column(scale=4, elem_classes="box-painel"):
-                    gr.Markdown("### DELEGUE UMA MISSÃO\nO Agente pesquisa, cria a estratégia e gera imagens de forma autônoma.")
-                    txt_missao = gr.Textbox(label="Missão", lines=4, placeholder="Ex: Crie o roteiro de um café premium...")
-                    btn_agente = gr.Button("INICIAR PROTOCOLO", variant="primary", size="lg")
-                with gr.Column(scale=6):
-                    out_estrat = gr.Textbox(label="Estratégia Final", lines=15, interactive=False)
-                    out_arte = gr.Image(label="Ativo Visual Gerado", type="filepath")
-            btn_agente.click(fn=executar_agente_mestre, inputs=[txt_missao], outputs=[out_estrat, out_arte])
-
-        with gr.TabItem("📑 AUDITORIA DE DADOS"):
-            with gr.Row():
-                with gr.Column(scale=4, elem_classes="box-painel"):
-                    arq_up = gr.File(label="Cofre de Documentos (PDF/XLS)", file_count="multiple")
-                    txt_ordem = gr.Textbox(label="Diretriz de Análise", lines=3)
-                    with gr.Row():
-                        c_img = gr.Checkbox(label="🖼️ Capa", value=False)
-                        c_aud = gr.Checkbox(label="🔊 Áudio", value=False)
-                    btn_exe = gr.Button("INICIAR AUDITORIA", variant="primary")
-                with gr.Column(scale=6):
-                    out_tela = gr.Textbox(label="Dossiê", lines=20)
-                    with gr.Row():
-                        out_word = gr.File(label="Dossiê Final")
-                        out_aud = gr.Audio(label="Síntese")
-                    out_tel = gr.Textbox(show_label=False, lines=1)
-            btn_exe.click(fn=gerar_dossie, inputs=[arq_up, txt_ordem, c_img, c_aud, gr.State(False)], outputs=[msg_sys, out_word, out_aud, out_tela, out_tel])
-
-        with gr.TabItem("🎬 ESTÚDIO GOLD"):
-            with gr.Row():
-                with gr.Column(elem_classes="box-painel"):
-                    gr.HTML("<h3 style='color: #D4AF37;'>🖼️ FOTOGRAFIA</h3>")
-                    img_sujeito = gr.Textbox(label="Objeto Principal", placeholder="Ex: Um frasco de perfume dourado...")
-                    img_fundo = gr.Textbox(label="Atmosfera")
-                    img_estilo = gr.Dropdown(choices=["Fotorrealista (8k)", "Cyberpunk"], label="Estética", value="Fotorrealista (8k)")
-                    btn_gerar_img = gr.Button("SINTETIZAR ARTE", variant="primary")
-                    out_img_est = gr.Image(label="Arte", type="filepath")
-                    btn_gerar_img.click(fn=gerar_imagem_estudio, inputs=[img_sujeito, img_fundo, img_estilo], outputs=[out_img_est])
-                
-                with gr.Column(elem_classes="box-painel"):
-                    gr.HTML("<h3 style='color: #D4AF37;'>🎙️ SÍNTESE VOCAL NEURAL</h3>")
-                    txt_aud = gr.Textbox(show_label=False, placeholder="Cole o roteiro...", lines=4)
-                    btn_gerar_aud = gr.Button("GERAR LOCUÇÃO", variant="primary")
-                    out_aud_estudio = gr.Audio(label="Arquivo MP3")
-                    btn_gerar_aud.click(fn=falar_laudo_estudio, inputs=[txt_aud], outputs=[out_aud_estudio])
-
-lista_de_usuarios = [(os.environ.get(f"USUARIO{i}"), os.environ.get(f"SENHA{i}")) for i in ["", "_1", "_2"] if os.environ.get(f"USUARIO{i}")]
-interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_de_usuarios if lista_de_usuarios else None)
+                    gr.Markdown("### EXECUÇÃO AUTÔNOMA\nDelegue um objetivo complexo. O agente efetuará pesquisas de mercado, redigirá a estratégia comercial e renderizará os ativos visuais de forma autônoma.")
+                    txt_missao = gr.Textbox(label="Dire
