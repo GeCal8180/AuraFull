@@ -57,7 +57,7 @@ if not MODELOS_TEXTO_ATIVOS: MODELOS_TEXTO_ATIVOS = ["llama-3.3-70b-versatile", 
 if not MODELOS_VISAO_ATIVOS: MODELOS_VISAO_ATIVOS = ["llama-3.2-90b-vision-preview"]
 
 # ==========================================
-# 2. DIRETÓRIOS E BANCO DE DADOS
+# 2. DIRETÓRIOS E BANCO DE DADOS (PERSISTÊNCIA)
 # ==========================================
 DIRETORIO = "./Central_IA_Master"
 DIR_CHROMA = f"{DIRETORIO}/Banco_de_Dados_Vetorial"
@@ -150,7 +150,7 @@ def motor_neural_groq(mensagens, visao=False, max_tokens=3000):
             
     log_erros = " | ".join(erros_acumulados)
     salvar_na_memoria(f"Falha Geral APIs: {log_erros}", "Sistema Erro")
-    return f"⚠️ [SISTEMA DE CONTINGÊNCIA ATIVADO]: O Córtex Neural encontrou bloqueios em todos os nós externos de processamento. A operação não pôde ser completada no servidor principal. Diagnóstico de bloqueio: {log_erros}"
+    return f"⚠️ [SISTEMA DE CONTINGÊNCIA ATIVADO]: O Córtex Neural encontrou bloqueios nos nós externos. Diagnóstico: {log_erros}"
 
 def chamar_gigante_openrouter(mensagens):
     if not chave_openrouter: return None
@@ -184,7 +184,7 @@ def extrair_texto(arquivo):
                                     ext = motor_neural_groq(msg, visao=True, max_tokens=1000)
                                     if not ext.startswith("⚠️"): texto += ext + "\n"
                                     time.sleep(1.5) 
-                    except: continue
+                    except: continue 
         elif nome.endswith(('.xlsx', '.csv')): texto = (pd.read_excel(caminho) if nome.endswith('.xlsx') else pd.read_csv(caminho)).to_string() 
         elif nome.endswith('.docx'): texto += "\n".join([p.text for p in docx.Document(caminho).paragraphs])
         elif nome.endswith(('.png', '.jpg', '.jpeg', '.webp')):
@@ -202,18 +202,73 @@ def limpar_banco_de_dados():
     try:
         if os.path.exists(DIR_CHROMA): shutil.rmtree(DIR_CHROMA)
         return "🧹 Memória Purgada com Sucesso."
-    except Exception as e: return f"Erro não crítico na purgação: {e}"
+    except Exception as e: return f"Erro não crítico: {e}"
+
+def aprimorar_prompt(sujeito, fundo, estilo):
+    sys_msg = "You are an AI prompt engineer. Translate the user's Portuguese concept into a highly detailed English prompt. CRITICAL: Output ONLY the raw English prompt."
+    user_msg = f"Translate and enhance:\nFocus: {sujeito}\nBackground: {fundo}\nStyle: {estilo}\nAdd tags: 8k resolution, highly detailed, photorealistic."
+    try: 
+        res = motor_neural_groq([{"role": "system", "content": sys_msg}, {"role": "user", "content": user_msg}], max_tokens=150)
+        if res and not res.startswith("⚠️"): return res.replace('"', '').replace('Here is the prompt:', '').strip()
+        return f"{sujeito}, {fundo}, {estilo}" 
+    except: return f"{sujeito}, {fundo}, {estilo}"
+
+def gerar_imagem_estudio(sujeito, fundo, estilo):
+    if not sujeito: return None
+    c = f"{DIR_MIDIA}/Img_{datetime.now().strftime('%H%M%S')}.jpg"
+    try:
+        prompt_en = aprimorar_prompt(sujeito, fundo, estilo)
+        cliente_hf.text_to_image(prompt_en, model="black-forest-labs/FLUX.1-schnell").save(c)
+        return c
+    except Exception as e: 
+        salvar_na_memoria(f"Falha ao renderizar imagem: {e}", "Erro Mídia")
+        return None
+
+def gerar_video_ia(imagem_base, sujeito, fundo, movimento):
+    try:
+        if imagem_base:
+            return Client("multimodalart/stable-video-diffusion").predict(imagem_base, api_name="/video"), "✅ Cena animada com êxito."
+        if not sujeito: return None, "⚠️ O Sujeito é obrigatório."
+        
+        prompt_en = aprimorar_prompt(sujeito, fundo, movimento)
+        try:
+            return Client("multimodalart/zeroscope-v2").predict(prompt_en, api_name="/infer"), "✅ Masterização Finalizada."
+        except:
+            return Client("hysts/ModelScope-Text-To-Video-Synthesis").predict(prompt_en, api_name="/infer"), "✅ Masterização Finalizada (Rota Alternativa)."
+            
+    except Exception as e: 
+        salvar_na_memoria(f"Falha Motor Vídeo: {e}", "Erro Mídia")
+        return None, f"⚠️ Acesso restrito global: Os servidores públicos de vídeo da Hugging Face atingiram o limite. Detalhe: {str(e)[:40]}"
+
+def falar_laudo_estudio(texto):
+    if not texto: return None
+    c = f"{DIR_MIDIA}/Voz_{datetime.now().strftime('%H%M%S')}.mp3"
+    try:
+        with open("t.txt", "w", encoding="utf-8") as f: f.write(texto[:3000].replace('*', ''))
+        os.system(f'edge-tts --voice pt-BR-AntonioNeural -f "t.txt" --write-media "{c}"')
+        return c
+    except: return None
+
+def gerar_backup():
+    cam = "./Cofre_Master_Backup.zip"
+    try:
+        with zipfile.ZipFile(cam, 'w', zipfile.ZIP_DEFLATED) as z:
+            for root, _, files in os.walk(DIRETORIO):
+                if "Banco_de_Dados_Vetorial" not in root:
+                    for f in files: z.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), DIRETORIO))
+        return cam, "📦 Pacote de Extração Gerado."
+    except Exception as e: return None, f"⚠️ Erro ao empacotar: {e}"
 
 # ==========================================
 # 6. MÓDULOS DE CHAT OMNI-COMMAND
 # ==========================================
 def disparar_webhook(url, texto_contexto):
-    if not url: return "⚠️ Requisito pendente: Informe a URL de Destino (Webhook)."
-    if not texto_contexto: return "⚠️ Pacote vazio: Não há dados para transmitir."
+    if not url: return "⚠️ Requisito pendente: Informe a URL."
+    if not texto_contexto: return "⚠️ Pacote vazio."
     try:
         r = requests.post(url, json={"sistema": "O Código de Ouro", "dados": texto_contexto, "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}, timeout=15)
-        return "✅ Protocolo de Transmissão Executado com Sucesso!" if r.status_code == 200 else f"✅ Sinal disparado. Retorno do Servidor: {r.status_code}"
-    except Exception as e: return f"⚠️ Falha Crítica na Ponte de Dados: {e}"
+        return "✅ Protocolo Executado!" if r.status_code == 200 else f"✅ Sinal disparado. Retorno: {r.status_code}"
+    except Exception as e: return f"⚠️ Falha Crítica: {e}"
 
 def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
     try:
@@ -230,16 +285,15 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
         if usar_internet and texto_usuario:
             try:
                 buscas = DDGS(timeout=10).text(texto_usuario, max_results=4)
-                if buscas: contexto_extra += "\n\n[MAPEAMENTO WEB EM TEMPO REAL]:\n" + "\n".join([f"FONTE ({r['title']}): {r['body']}" for r in buscas])
-            except:
-                contexto_extra += f"\n\n[AVISO DE SISTEMA]: A Antena Web sofreu bloqueio temporário do buscador (Rate Limit)."
+                if buscas: contexto_extra += "\n\n[MAPEAMENTO WEB]:\n" + "\n".join([f"FONTE ({r['title']}): {r['body']}" for r in buscas])
+            except: contexto_extra += f"\n\n[AVISO]: Antena Web bloqueada temporariamente."
 
         sys_prompt = f"Você é a Inteligência de Comando do sistema 'O Código de Ouro', atuando como {persona}. "
         sys_prompt += "DIRETRIZ SUPREMA: Se houver dados marcados como [MAPEAMENTO WEB], assuma-os como a verdade do presente. Não mencione limitações de data.\n\n"
         sys_prompt += "HABILIDADES OMNI (GERAÇÃO DIRETA NO CHAT):\n"
         sys_prompt += "- Se o usuário pedir para gerar, criar ou desenhar uma IMAGEM ou FOTO, adicione no final da sua resposta: [IMG: descrição da cena em inglês com detalhes fotorrealistas]\n"
         sys_prompt += "- Se o usuário pedir para gerar ou criar um VÍDEO, adicione no final: [VID: descrição da cena em inglês para animação]\n"
-        sys_prompt += "- Se o usuário pedir para gerar um DOCUMENTO, RELATÓRIO, LAUDO ou ARQUIVO WORD, adicione no final: [DOC: insira aqui o texto e conteúdo completo que deve ir para dentro do documento]"
+        sys_prompt += "- Se o usuário pedir para gerar um DOCUMENTO ou LAUDO, adicione no final: [DOC: insira aqui o texto e conteúdo completo que deve ir para dentro do documento]"
         
         texto_final = texto_usuario + contexto_extra
         if imagens and not texto_final.strip(): texto_final = "Realize uma varredura pericial absoluta nesta imagem."
@@ -278,7 +332,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
                     if cam:
                         tag_md = f"\n\n🖼️ **Ativo Visual Renderizado:**\n![Imagem](/file={os.path.abspath(cam)})"
                         resposta = resposta.replace(match.group(0), tag_md)
-                    else: resposta = resposta.replace(match.group(0), "\n\n⚠️ [Contingência]: Renderizador de Imagens indisponível. Arte ignorada.")
+                    else: resposta = resposta.replace(match.group(0), "\n\n⚠️ [Contingência]: Renderizador de Imagens sobrecarregado.")
                 except: resposta = resposta.replace(match.group(0), "")
                     
         if "[VID:" in resposta:
@@ -311,7 +365,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
 
         salvar_na_memoria(f"U: {texto_usuario[:50]}... IA: Processamento Omni Ativo.", "Terminal Master")
         return resposta
-    except Exception as e: return f"⚠️ Interrupção no Córtex Principal: {str(e)}"
+    except Exception as e: return f"⚠️ Interrupção no Córtex do Sistema: {str(e)}"
 
 # ==========================================
 # 7. AGENTE MESTRE E ESTÚDIO ISOLADOS
@@ -336,7 +390,7 @@ def executar_agente_mestre(objetivo, progresso=gr.Progress()):
             resposta_limpa = re.sub(r'\[IMAGEM:\s*(.*?)\]', '', estrategia, flags=re.IGNORECASE).strip()
             cam_img = f"{DIR_MIDIA}/Agente_{datetime.now().strftime('%H%M%S')}.jpg"
             cliente_hf.text_to_image(match.group(1).strip() if match else f"High-end corporate asset for {objetivo}, 8k", model="black-forest-labs/FLUX.1-schnell").save(cam_img)
-        except: resposta_limpa = estrategia
+        except: resposta_limpa = estrategia 
         
         salvar_na_memoria(objetivo[:50], "Agente Autônomo")
         progresso(1.0, desc="✅ Missão Cumprida.")
@@ -406,37 +460,6 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
         return "✅ Auditoria Completa", cam_word, cam_audio, resposta_limpa, f"📊 MÉTRICA: {palavras} palavras processadas."
     except Exception as e: return f"⚠️ Falha de Segurança Operacional: {e}", None, None, "", ""
 
-# --- O TRADUTOR NEURAL RESTRITO (RESOLVE O PROBLEMA DO PORTUGUÊS/INGLÊS) ---
-def aprimorar_prompt(sujeito, fundo, estilo):
-    sys_msg = "You are a professional AI image/video prompt engineer. Translate the user's Brazilian Portuguese concept into a highly detailed English prompt. CRITICAL: Output ONLY the raw English prompt. Do not add quotes, do not say 'Here is the prompt', no conversational text."
-    user_msg = f"Translate and enhance this for Midjourney/Flux:\nFocus: {sujeito}\nBackground: {fundo}\nStyle/Movement: {estilo}\nAdd high quality tags: 8k resolution, highly detailed, cinematic lighting, masterpiece."
-    
-    try: 
-        res = motor_neural_groq([{"role": "system", "content": sys_msg}, {"role": "user", "content": user_msg}], max_tokens=150)
-        if res and not res.startswith("⚠️"):
-            # Limpeza cirúrgica caso a IA ainda teime em ser "educada"
-            res_limpa = res.replace('"', '').replace('Here is the prompt:', '').replace('Prompt:', '').strip()
-            return res_limpa
-        return f"{sujeito}, {fundo}, {estilo}" # Fallback seguro
-    except: return f"{sujeito}, {fundo}, {estilo}"
-
-def gerar_imagem_estudio(sujeito, fundo, estilo):
-    if not sujeito: return None
-    c = f"{DIR_MIDIA}/Img_{datetime.now().strftime('%H%M%S')}.jpg"
-    try:
-        cliente_hf.text_to_image(aprimorar_prompt(sujeito, fundo, estilo), model="black-forest-labs/FLUX.1-schnell").save(c)
-        return c
-    except: return None
-
-def gerar_video_ia(imagem_base, sujeito, fundo, movimento):
-    try:
-        if imagem_base:
-            return Client("multimodalart/stable-video-diffusion").predict(imagem_base, api_name="/video"), "✅ Cena animada com êxito."
-        if not sujeito: return None, "⚠️ O Sujeito é obrigatório."
-        prompt_ingles = aprimorar_prompt(sujeito, fundo, movimento)
-        return Client("multimodalart/zeroscope-v2").predict(prompt_ingles, api_name="/infer"), "✅ Masterização Finalizada."
-    except Exception as e: return None, f"⚠️ Motor Visual Congestionado. Tente novamente em breve."
-
 def falar_laudo_estudio(texto):
     if not texto: return None
     c = f"{DIR_MIDIA}/Voz_{datetime.now().strftime('%H%M%S')}.mp3"
@@ -446,18 +469,8 @@ def falar_laudo_estudio(texto):
         return c
     except: return None
 
-def gerar_backup():
-    cam = "./Cofre_Master_Backup.zip"
-    try:
-        with zipfile.ZipFile(cam, 'w', zipfile.ZIP_DEFLATED) as z:
-            for root, _, files in os.walk(DIRETORIO):
-                if "Banco_de_Dados_Vetorial" not in root:
-                    for f in files: z.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), DIRETORIO))
-        return cam, "📦 Pacote de Extração Gerado."
-    except Exception as e: return None, f"⚠️ Erro ao empacotar: {e}"
-
 # ==========================================
-# 8. DESIGN SYSTEM ALTO LUXO
+# 8. DESIGN SYSTEM ALTO LUXO (COM SCROLL FIXO)
 # ==========================================
 tema_ultra = gr.themes.Base(
     font=[gr.themes.GoogleFont("Outfit"), gr.themes.GoogleFont("Inter"), "sans-serif"],
@@ -484,6 +497,9 @@ thead th, th { background-color: #0A0A0A !important; color: #D4AF37 !important; 
 tbody td, td { background-color: #121212 !important; color: #F5F5F7 !important; border: 1px solid #222 !important; padding: 10px !important; }
 tbody tr:hover td { background-color: #1A1A1A !important; }
 .cell-wrap input { color: #F5F5F7 !important; background-color: transparent !important; }
+
+/* TRAVA DE SCROLL PARA TEXTO DO CHAT */
+.chat-container textarea { max-height: 120px !important; overflow-y: auto !important; }
 
 code, pre { background-color: #181818 !important; color: #D4AF37 !important; border: 1px solid #2A2A2A !important; border-radius: 6px !important; }
 input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #121212 inset !important; -webkit-text-fill-color: #F5F5F7 !important; }
@@ -538,7 +554,8 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
             chat = gr.ChatInterface(
                 fn=responder_chat_multimodal, multimodal=True, additional_inputs=[persona_box, net_box],
                 chatbot=gr.Chatbot(height="70vh", show_label=False, placeholder="SISTEMA OMNI ATIVO. QUAL A DIRETRIZ DE COMANDO?"),
-                textbox=gr.MultimodalTextbox(placeholder="Insira textos táticos, bases de dados Excel, PDFs ou peça para gerar Imagens e Documentos...", container=False, scale=7, show_label=False)
+                # Trava Gradio ativada: Máximo de 5 linhas antes de criar scroll interno
+                textbox=gr.MultimodalTextbox(placeholder="Insira textos táticos, bases de dados Excel, PDFs ou peça para gerar Imagens e Documentos...", container=False, scale=7, show_label=False, max_lines=5)
             )
 
         with gr.TabItem("🗄️ CAIXA PRETA (LOGS)"):
