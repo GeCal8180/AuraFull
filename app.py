@@ -264,10 +264,11 @@ def gerar_dossie(arquivos, instrucao, usar_img, usar_aud, usar_tribunal, progres
             
         progresso(0.5, desc="Sintetizando Ouro...")
         contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
-        regra_tribunal = "\n[SISTEMA DE DUPLA CHECAGEM]: Atue como Auditor Implacável. Se houver divergências ou erros lógicos nos dados extraídos, aponte-os em uma seção '⚠️ ALERTA DE DIVERGÊNCIA'." if usar_tribunal else ""
+        
+        regra_tribunal = "\n\n[SISTEMA DE DUPLA CHECAGEM ATIVADO]: Você deve agir como um Auditor Implacável. Revise os dados cruzados. Se houver qualquer divergência, contradição ou anomalia nas informações extraídas, crie obrigatoriamente uma seção destacada no texto final chamada '⚠️ ALERTA DE DIVERGÊNCIA' e aponte o erro exato para segurança do cliente." if usar_tribunal else ""
         regra_imagem = "\nNo final, escreva: [IMAGEM: descreva em INGLÊS uma cena fotorrealista para este conteúdo]" if usar_img else ""
         
-        prompt = f"Analise como inteligência primária do sistema O Código de Ouro.\nDADOS: {contexto}\nAÇÃO: {instrucao}{regra_tribunal}{regra_imagem}"
+        prompt = f"Analise os dados fornecidos como a inteligência primária do sistema O Código de Ouro.\nDADOS: {contexto}\nAÇÃO: {instrucao}{regra_tribunal}{regra_imagem}"
         
         resposta = chamar_gigante_openrouter([{"role": "user", "content": prompt}]) if chave_openrouter else None
         if not resposta: resposta = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ_RAPIDO, max_tokens=4000).choices[0].message.content
@@ -325,19 +326,18 @@ def gerar_backup():
 # ==========================================
 # 7. TIPOGRAFIA DE ELITE E DESIGN SYSTEM
 # ==========================================
-# A importação das Fontes Google (Outfit para Títulos e Inter para Textos)
 tema_ultra = gr.themes.Base(
     font=[gr.themes.GoogleFont("Outfit"), gr.themes.GoogleFont("Inter"), "sans-serif"],
 ).set(
     body_background_fill="#070707", body_background_fill_dark="#070707", 
-    body_text_color="#F5F5F7", body_text_color_dark="#F5F5F7", # Branco Pérola Premium
+    body_text_color="#F5F5F7", body_text_color_dark="#F5F5F7", 
     background_fill_primary="#0D0D0D", background_fill_primary_dark="#0D0D0D", 
     background_fill_secondary="#111111", background_fill_secondary_dark="#111111",
     border_color_primary="#2A2A2A", border_color_primary_dark="#2A2A2A",
     block_background_fill="#0D0D0D", block_background_fill_dark="#0D0D0D",
-    block_label_text_color="#C5A059", block_label_text_color_dark="#C5A059", # Ouro Envelhecido
+    block_label_text_color="#C5A059", block_label_text_color_dark="#C5A059", 
     block_title_text_color="#D4AF37", block_title_text_color_dark="#D4AF37", 
-    input_background_fill="#121212", input_background_fill_dark="#121212", # Fundo Onyx para Inputs
+    input_background_fill="#121212", input_background_fill_dark="#121212", 
     input_border_color="#333333", input_border_color_dark="#333333",
     button_primary_background_fill="linear-gradient(145deg, #D4AF37, #AA7C11)", button_primary_background_fill_dark="linear-gradient(145deg, #D4AF37, #AA7C11)",
     button_primary_text_color="#000000", button_secondary_background_fill="#181818", button_secondary_text_color="#C5A059"
@@ -348,39 +348,31 @@ css_ultra = """
 
 body, .gradio-container { background-color: #070707 !important; color: #F5F5F7 !important; font-family: 'Inter', sans-serif !important; }
 h1, h2, h3, h4, h5, h6, .tab-nav button { font-family: 'Outfit', sans-serif !important; font-weight: 600 !important; }
-
 footer { display: none !important; }
 
-/* Controles de Contraste Fino */
 p, label, .markdown-text, .chatbot { color: #E0E0E0 !important; font-size: 1.02rem !important; line-height: 1.6 !important; }
 h3 { color: #C5A059 !important; letter-spacing: 1px; }
 
-/* Inputs e Caixas de Texto com Legibilidade Absoluta */
 input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #121212 inset !important; -webkit-text-fill-color: #F5F5F7 !important; }
 textarea, input, select, .wrap-inner, .dropdown-menu, .wrap { background-color: #121212 !important; color: #F5F5F7 !important; border: 1px solid #333333 !important; border-radius: 8px !important; font-family: 'Inter', sans-serif !important; }
 textarea::placeholder, input::placeholder { color: #555555 !important; }
 
-/* Botões do Sistema Deus */
 button { text-transform: uppercase; font-weight: 700 !important; letter-spacing: 1.5px !important; transition: 0.3s all ease !important; border-radius: 8px !important; }
 button:hover { transform: translateY(-2px); }
 button.primary { color: #000000 !important; border: none !important; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25) !important; text-shadow: none !important; font-family: 'Outfit', sans-serif !important; }
 button.secondary { border: 1px solid #3A3A3A !important; background: #181818 !important; color: #D4AF37 !important; font-family: 'Outfit', sans-serif !important; }
 
-/* Estrutura Superior e Navegação */
 .tabs { background: transparent !important; border: none !important; }
 .tab-nav { background: transparent !important; border-bottom: 1px solid #222 !important; padding: 0 20px !important; gap: 15px; justify-content: flex-start !important; }
 .tab-nav button { color: #666666 !important; padding: 15px 25px !important; border-radius: 0 !important; border: none !important; background: transparent !important; border-bottom: 2px solid transparent !important; }
 .tab-nav button.selected { color: #D4AF37 !important; border-bottom: 2px solid #D4AF37 !important; background: transparent !important; text-shadow: 0 0 10px rgba(212,175,55,0.3) !important; }
 
-/* Painéis Flutuantes de Vidro Escuro */
 .box-painel { background: #0D0D0D !important; border-radius: 12px !important; padding: 30px !important; border: 1px solid #1F1F1F !important; margin-bottom: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
 
-/* Interface do Chatbot de Luxo */
 .chat-container { border-radius: 12px !important; background: #0A0A0A !important; border: 1px solid #222 !important; }
 .message.bot { background: #111111 !important; border-left: 2px solid #D4AF37 !important; color: #F5F5F7 !important; border-radius: 0 12px 12px 0 !important; }
 .message.user { background: #181818 !important; border: 1px solid #2A2A2A !important; color: #C5A059 !important; border-radius: 12px 12px 0 12px !important; }
 
-/* Sidebar Premium */
 .sidebar { background: #070707 !important; border-right: 1px solid #1F1F1F !important; padding: 25px !important; }
 """
 
@@ -426,4 +418,48 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
             with gr.Row():
                 with gr.Column(scale=4, elem_classes="box-painel"):
                     gr.Markdown("### EXECUÇÃO AUTÔNOMA\nDelegue um objetivo complexo. O agente efetuará pesquisas de mercado, redigirá a estratégia comercial e renderizará os ativos visuais de forma autônoma.")
-                    txt_missao = gr.Textbox(label="Dire
+                    txt_missao = gr.Textbox(label="Diretriz da Missão", lines=5, placeholder="Ex: Desenvolva uma campanha de marketing para um relógio de luxo...")
+                    btn_agente = gr.Button("INICIAR PROTOCOLO DE OURO", variant="primary", size="lg")
+                with gr.Column(scale=6):
+                    out_estrat = gr.Textbox(label="Estratégia Sintetizada", lines=16, interactive=False)
+                    out_arte = gr.Image(label="Ativo Visual Comercial", type="filepath")
+            btn_agente.click(fn=executar_agente_mestre, inputs=[txt_missao], outputs=[out_estrat, out_arte])
+
+        with gr.TabItem("📑 AUDITORIA IA"):
+            with gr.Row():
+                with gr.Column(scale=4, elem_classes="box-painel"):
+                    arq_up = gr.File(label="Cofre de Documentos (PDF/Imagens/XLSX)", file_count="multiple")
+                    txt_ordem = gr.Textbox(label="Diretriz de Auditoria", lines=3, placeholder="Determine o alvo da análise documental...")
+                    with gr.Row():
+                        c_img = gr.Checkbox(label="🖼️ Capa Visual", value=False)
+                        c_aud = gr.Checkbox(label="🔊 Síntese Vocal", value=False)
+                        c_trib = gr.Checkbox(label="⚖️ Dupla Checagem (Antifraude)", value=False)
+                    btn_exe = gr.Button("INICIAR VARREDURA NEURAL", variant="primary")
+                with gr.Column(scale=6):
+                    out_tela = gr.Textbox(label="Dossiê Preliminar", lines=20, interactive=False)
+                    with gr.Row():
+                        out_word = gr.File(label="Dossiê Oficial (Word)")
+                        out_aud = gr.Audio(label="Ouvir Laudo Executivo")
+                    out_tel = gr.Textbox(show_label=False, lines=1, interactive=False)
+            btn_exe.click(fn=gerar_dossie, inputs=[arq_up, txt_ordem, c_img, c_aud, c_trib], outputs=[msg_sys, out_word, out_aud, out_tela, out_tel])
+
+        with gr.TabItem("🎬 ESTÚDIO GOLD"):
+            with gr.Row():
+                with gr.Column(elem_classes="box-painel"):
+                    gr.HTML("<h3 style='color: #D4AF37;'>🖼️ FOTOGRAFIA COMERCIAL</h3>")
+                    img_sujeito = gr.Textbox(label="Foco da Composição", placeholder="Ex: Um frasco de perfume negro com detalhes dourados...")
+                    img_fundo = gr.Textbox(label="Atmosfera de Fundo")
+                    img_estilo = gr.Dropdown(choices=["Fotorrealista 8k", "Cinematic Dark", "Cyberpunk", "Minimalista de Luxo"], label="Direção de Arte", value="Fotorrealista 8k")
+                    btn_gerar_img = gr.Button("RENDERIZAR COMPOSIÇÃO", variant="primary")
+                    out_img_est = gr.Image(label="Ativo Final", type="filepath")
+                    btn_gerar_img.click(fn=gerar_imagem_estudio, inputs=[img_sujeito, img_fundo, img_estilo], outputs=[out_img_est])
+                
+                with gr.Column(elem_classes="box-painel"):
+                    gr.HTML("<h3 style='color: #D4AF37;'>🎙️ SÍNTESE VOCAL NEURAL</h3>")
+                    txt_aud = gr.Textbox(show_label=False, placeholder="Insira o roteiro da campanha aqui...", lines=5)
+                    btn_gerar_aud = gr.Button("SINTETIZAR LOCUÇÃO", variant="primary")
+                    out_aud_estudio = gr.Audio(label="Arquivo Master (MP3)")
+                    btn_gerar_aud.click(fn=falar_laudo_estudio, inputs=[txt_aud], outputs=[out_aud_estudio])
+
+lista_de_usuarios = [(os.environ.get(f"USUARIO{i}"), os.environ.get(f"SENHA{i}")) for i in ["", "_1", "_2"] if os.environ.get(f"USUARIO{i}")]
+interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_de_usuarios if lista_de_usuarios else None)
