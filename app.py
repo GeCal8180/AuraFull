@@ -105,20 +105,23 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file: return base64.b64encode(image_file.read()).decode('utf-8')
 
 # ==========================================
-# 4. MOTOR HÍBRIDO BLINDADO (CASCATA DE RESILIÊNCIA)
+# 4. MOTOR HÍBRIDO (COM RAIO-X DE DIAGNÓSTICO)
 # ==========================================
 def motor_neural_groq(mensagens, visao=False, max_tokens=3000):
-    # Se um falhar, tenta o próximo imediatamente. Zero travamentos.
-    modelos_texto = ["llama-3.1-8b-instant", "llama3-8b-8192", "gemma2-9b-it", "mixtral-8x7b-32768"]
+    modelos_texto = ["llama-3.1-8b-instant", "gemma2-9b-it", "llama-3.3-70b-versatile"]
     modelos_visao = ["llama-3.2-90b-vision-preview", "llama-3.2-11b-vision-preview"]
     modelos_alvo = modelos_visao if visao else modelos_texto
     
+    ultimo_erro = ""
     for mod in modelos_alvo:
         try:
             r = cliente_groq.chat.completions.create(model=mod, messages=mensagens, max_tokens=max_tokens, temperature=0.3)
             return r.choices[0].message.content
-        except Exception: continue
-    raise Exception("Todos os motores neurais estão sobrecarregados no momento.")
+        except Exception as e: 
+            ultimo_erro = str(e)
+            continue
+            
+    raise Exception(f"Acesso Recusado pela Groq. Erro Exato: {ultimo_erro}")
 
 def chamar_gigante_openrouter(mensagens):
     if not chave_openrouter: return None
@@ -142,14 +145,14 @@ def extrair_texto(arquivo):
                     txt_digital = p.extract_text()
                     if txt_digital and len(txt_digital.strip()) > 30: texto += txt_digital + "\n"
                     else:
-                        if idx < 5: # Limite de segurança: Apenas lê imagens nas primeiras 5 páginas para não estourar a API
+                        if idx < 5: 
                             try:
                                 buffer = io.BytesIO()
                                 p.to_image(resolution=150).original.save(buffer, format="JPEG")
                                 img_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
                                 msg = [{"role": "user", "content": [{"type": "text", "text": "Extract text."}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}]}]
                                 texto += motor_neural_groq(msg, visao=True, max_tokens=1000) + "\n"
-                                time.sleep(1) # Proteção Rate Limit
+                                time.sleep(1) 
                             except: pass
         elif nome.endswith(('.xlsx', '.csv')): texto = (pd.read_excel(caminho) if nome.endswith('.xlsx') else pd.read_csv(caminho)).to_string() 
         elif nome.endswith('.docx'): texto += "\n".join([p.text for p in docx.Document(caminho).paragraphs])
