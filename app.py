@@ -37,6 +37,28 @@ embeddings = HuggingFaceInferenceAPIEmbeddings(
 )
 
 # ==========================================
+# 1.5 RADAR DE CÓRTEX (AUTO-DESCOBERTA DE MODELOS)
+# ==========================================
+MODELOS_TEXTO_ATIVOS = []
+MODELOS_VISAO_ATIVOS = []
+
+# O sistema vasculha os servidores da Groq e descobre sozinho quais modelos estão online e permitidos hoje.
+if chave_groq:
+    try:
+        resposta_modelos = requests.get("https://api.groq.com/openai/v1/models", headers={"Authorization": f"Bearer {chave_groq}"}).json()
+        if "data" in resposta_modelos:
+            for m in resposta_modelos["data"]:
+                m_id = m["id"]
+                if "whisper" in m_id.lower() or "tool-use" in m_id.lower(): continue
+                if "vision" in m_id.lower(): MODELOS_VISAO_ATIVOS.append(m_id)
+                else: MODELOS_TEXTO_ATIVOS.append(m_id)
+    except: pass
+
+# Trava de Segurança caso a API não responda a tempo
+if not MODELOS_TEXTO_ATIVOS: MODELOS_TEXTO_ATIVOS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+if not MODELOS_VISAO_ATIVOS: MODELOS_VISAO_ATIVOS = ["llama-3.2-90b-vision-preview"]
+
+# ==========================================
 # 2. DIRETÓRIOS E BANCO DE DADOS (PERSISTÊNCIA)
 # ==========================================
 DIRETORIO = "./Central_IA_Master"
@@ -105,14 +127,10 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file: return base64.b64encode(image_file.read()).decode('utf-8')
 
 # ==========================================
-# 4. MOTOR HÍBRIDO (DIAGNÓSTICO ESTRUTURAL CORRIGIDO)
+# 4. MOTOR HÍBRIDO ESTRATÉGICO
 # ==========================================
 def motor_neural_groq(mensagens, visao=False, max_tokens=3000):
-    # Lista atualizada com os modelos mais robustos e garantidos da tier gratuita
-    modelos_texto = ["llama-3.1-8b-instant", "gemma2-9b-it", "llama-3.2-3b-preview"]
-    modelos_visao = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"]
-    modelos_alvo = modelos_visao if visao else modelos_texto
-    
+    modelos_alvo = MODELOS_VISAO_ATIVOS if visao else MODELOS_TEXTO_ATIVOS
     erros_acumulados = []
     
     for mod in modelos_alvo:
@@ -123,9 +141,8 @@ def motor_neural_groq(mensagens, visao=False, max_tokens=3000):
             erros_acumulados.append(f"[{mod} falhou: {str(e)}]")
             continue
             
-    # Se todos falharem, o sistema cospe o log inteiro na tela para você auditar
     log_erros = " | ".join(erros_acumulados)
-    raise Exception(f"Bloqueio da Groq. Log Exato: {log_erros}")
+    raise Exception(f"Acesso Negado (Limites da Groq atingidos ou Chave Inválida). Log: {log_erros}")
 
 def chamar_gigante_openrouter(mensagens):
     if not chave_openrouter: return None
@@ -381,7 +398,7 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
     
     with gr.Sidebar(open=True):
         gr.HTML(renderizar_logo())
-        status_cerebro = "🔵 **Modo Matrix Gigante Ativo**" if os.environ.get("OPENROUTER_API_KEY") else "🟢 **Modo Cascata Neural**"
+        status_cerebro = "🔵 **Modo Matrix Gigante Ativo**" if os.environ.get("OPENROUTER_API_KEY") else f"🟢 **Radar de Córtex: {len(MODELOS_TEXTO_ATIVOS)} Motores Ativos**"
         gr.HTML(f"<h3 style='text-align: center; color: #555; text-transform: uppercase; font-size: 11px; letter-spacing: 4px; margin-bottom: 20px;'>{status_cerebro}</h3>")
         
         with gr.Accordion("⚙️ NÚCLEO DE OPERAÇÕES", open=False):
