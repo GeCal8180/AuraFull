@@ -13,7 +13,6 @@ from groq import Groq
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_chroma import Chroma
-from langchain_community.tools import DuckDuckGoSearchRun
 from huggingface_hub import InferenceClient
 
 # ==========================================
@@ -26,7 +25,6 @@ cliente_groq = Groq(api_key=chave_groq)
 cliente_hf = InferenceClient(token=chave_hf)
 MODELO_GROQ = "llama-3.3-70b-versatile"
 MODELO_VISAO = "llama-3.2-90b-vision-preview"
-buscador_web = DuckDuckGoSearchRun()
 
 # Memória terceirizada na nuvem (Custo e Peso ZERO para o Render)
 embeddings = HuggingFaceInferenceAPIEmbeddings(
