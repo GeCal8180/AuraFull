@@ -254,7 +254,7 @@ def gerar_backup():
     return cam, "📦 Backup Pronto"
 
 # ==========================================
-# 7. DESIGN SYSTEM V9.3 (AESTHETIC UI)
+# 7. DESIGN SYSTEM V9.4 (AESTHETIC UI)
 # ==========================================
 tema_ultra = gr.themes.Soft(
     primary_hue="zinc", secondary_hue="slate", neutral_hue="zinc",
@@ -309,16 +309,14 @@ with gr.Blocks(title="Central Master", theme=tema_ultra, css=css_ultra, fill_wid
     # === ÁREA CENTRAL ===
     with gr.Tabs():
         
-        # ABA 1: CHAT PRINCIPAL
+        # ABA 1: CHAT PRINCIPAL (CORRIGIDO SEM A TRAVA DE TIPO E SEM BOTÕES CUSTOMIZADOS)
         with gr.TabItem("💬 IA Universal"):
             chat = gr.ChatInterface(
                 fn=responder_chat_multimodal, 
                 multimodal=True,
-                type="messages",
                 additional_inputs=[persona_box, net_box],
                 chatbot=gr.Chatbot(height="68vh", placeholder="Como posso ajudar no seu projeto hoje? (A barra lateral controla a especialidade)"),
-                textbox=gr.MultimodalTextbox(placeholder="Digite aqui e aperte Enter, ou clique no 📎 para anexar arquivos/imagens...", container=False, scale=7),
-                submit_btn="Enviar 🚀", retry_btn="🔄 Tentar Novamente", undo_btn="✏️ Corrigir", clear_btn="🗑️ Limpar"
+                textbox=gr.MultimodalTextbox(placeholder="Digite aqui e aperte Enter, ou clique no 📎 para anexar arquivos/imagens...", container=False, scale=7)
             )
             btn_exportar.click(fn=exportar_conversa, inputs=[chat.chatbot], outputs=[arq_exportado]).then(lambda: gr.update(visible=True), None, arq_exportado)
 
