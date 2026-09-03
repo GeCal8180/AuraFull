@@ -165,7 +165,7 @@ def motor_gerar_video(prompt_cena, imagem_base=None):
     return None
 
 # ==========================================
-# 5. O CHAT AGÊNTICO
+# 5. O CHAT AGÊNTICO OMNICHANNEL
 # ==========================================
 def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessao):
     texto_usuario = mensagem.get("text", "") if isinstance(mensagem, dict) else str(mensagem)
@@ -180,7 +180,7 @@ def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessa
         ext = arq.lower()
         if ext.endswith(('.png', '.jpg', '.jpeg', '.webp')):
             imagens_anexadas.append(arq)
-            yield f"👁️ *Analisando a imagem enviada...*"
+            yield f"👁️ *Analisando a imagem anexada...*"
         else:
             yield f"📄 *Lendo o conteúdo do documento...*"
             contexto_extra += f"\n[DOCUMENTO]:\n{extrair_texto(arq)}\n"
@@ -192,10 +192,10 @@ def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessa
             contexto_extra += "\n\n[DADOS WEB]:\n" + "\n".join([f"Título: {r['title']} - Conteúdo: {r['body']}" for r in resultados])
         except: pass
 
-    yield "🧠 *Gerando resposta...*"
+    yield "🧠 *Gerando resposta executiva...*"
 
-    sys_prompt = f"""Você é o {persona}, um assistente de IA avançado.
-Responda de forma clara, profissional e direta.
+    sys_prompt = f"""Você é o {persona}, a IA do "Código de Ouro".
+Responda de forma clara, profissional e com foco em alta conversão.
 
 SEUS 5 PODERES NO CHAT (Use apenas SE o usuário pedir explicitamente):
 1. GERAR NOVA IMAGEM: 
@@ -258,7 +258,7 @@ Use blocos de código ```mermaid para gerar gráficos visuais de dados numérico
         cam_gerada = motor_gerar_imagem(prompt_i, prop_i)
         if cam_gerada and os.path.exists(cam_gerada):
             b64_img = encode_file_b64(cam_gerada)
-            anexos_html += f"\n\n**🖼️ Imagem Gerada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:18px; border: 2px solid #D4AF37; margin-top:8px;' />\n"
+            anexos_html += f"\n\n**🖼️ Imagem Gerada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:20px; border: 1px solid rgba(212, 175, 55, 0.4); margin-top:8px; box-shadow:0 8px 25px rgba(0,0,0,0.5);' />\n"
 
     match_edit = re.search(r'\[AÇÃO_EDITAR_IMAGEM:\s*(.*?)\]', resposta_acumulada)
     if match_edit and imagens_anexadas:
@@ -267,7 +267,7 @@ Use blocos de código ```mermaid para gerar gráficos visuais de dados numérico
         cam_edit = motor_editar_imagem(imagens_anexadas[-1], prompt_e)
         if cam_edit and os.path.exists(cam_edit):
             b64_img = encode_file_b64(cam_edit)
-            anexos_html += f"\n\n**✨ Imagem Editada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:18px; border: 2px solid #D4AF37; margin-top:8px;' />\n"
+            anexos_html += f"\n\n**✨ Imagem Editada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:20px; border: 1px solid rgba(212, 175, 55, 0.4); margin-top:8px; box-shadow:0 8px 25px rgba(0,0,0,0.5);' />\n"
 
     match_aud = re.search(r'\[AÇÃO_AUDIO:\s*(.*?)\]', resposta_acumulada)
     if match_aud:
@@ -286,7 +286,7 @@ Use blocos de código ```mermaid para gerar gráficos visuais de dados numérico
         cam_vid = motor_gerar_video(prompt_v, img_referencia)
         if cam_vid and os.path.exists(cam_vid):
             b64_vid = encode_file_b64(cam_vid)
-            anexos_html += f"\n\n**🎥 Vídeo Gerado:**\n<video controls style='max-width:100%; border-radius:18px; border: 2px solid #D4AF37; margin-top:8px;' src='data:video/mp4;base64,{b64_vid}'></video>\n"
+            anexos_html += f"\n\n**🎥 Vídeo Gerado:**\n<video controls style='max-width:100%; border-radius:20px; border: 1px solid rgba(212, 175, 55, 0.4); margin-top:8px; box-shadow:0 8px 25px rgba(0,0,0,0.5);' src='data:video/mp4;base64,{b64_vid}'></video>\n"
 
     resposta_final_limpa = re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada).strip() + anexos_html
     yield resposta_final_limpa
@@ -312,7 +312,7 @@ def exportar_conversa_docx(historico):
     doc.add_heading('Histórico da Conversa', 0)
     for item in historico:
         if isinstance(item, dict):
-            autor = "Você:" if item.get("role") == "user" else "Chat IA:"
+            autor = "Você:" if item.get("role") == "user" else "Código de Ouro:"
             doc.add_heading(autor, level=2)
             doc.add_paragraph(re.sub(r'<.*?>', '', item.get("content", "")))
     doc.save(cam_word)
@@ -358,67 +358,81 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
         return f"Erro durante a análise: {e}", None, "", ""
 
 # ==========================================
-# 6. DESIGN SYSTEM: LUXURY BLACK & GOLD
+# 6. DESIGN SYSTEM: CÓDIGO DE OURO (DOLA STYLE)
 # ==========================================
 PWA_HEAD = """
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0A0A0A">
-<title>Titã AI</title>
+<meta name="theme-color" content="#050505">
+<title>Código de Ouro</title>
 """
 
-css_black_gold = """
+tema_base = gr.themes.Soft(
+    font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"], radius_size=gr.themes.sizes.radius_xxl,
+).set(
+    body_background_fill="#050505", block_background_fill="#0E0E0E",
+    border_color_primary="transparent", block_border_width="0px"
+)
+
+# O CSS a seguir garante que a estrutura seja EXATAMENTE igual a do Dola (Centralizada, Pílulas) 
+# mas com as cores Premium Milimétricas (Preto Caviar e Dourado)
+css_ouro = """
 footer {display: none !important;}
-body, .gradio-container { background-color: #0A0A0A !important; color: #FFFFFF !important; }
+body, .gradio-container { background-color: #050505 !important; color: #FFFFFF !important; }
 
-/* Ocultar elementos brancos padrão */
-.dark, .light { background-color: #0A0A0A !important; }
+/* ESTRUTURA DOLA AI (Centralizada e Fina) */
+.gradio-container {max-width: 980px !important; margin: auto !important; border: none !important;}
 
-/* Cabeçalho de Logotipo */
-.logo-container { text-align: center; padding: 25px 0 10px 0; }
-.logo-title { color: #D4AF37; font-size: 36px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 3px; font-family: 'Inter', sans-serif;}
-.logo-subtitle { color: #888888; font-size: 14px; margin-top: 5px; font-weight: 500; letter-spacing: 1px;}
+/* CABEÇALHO CÓDIGO DE OURO */
+.logo-container { text-align: center; padding: 30px 0 15px 0; }
+.logo-title { color: #D4AF37; font-size: 34px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 4px; font-family: 'Inter', sans-serif; text-shadow: 0px 4px 20px rgba(212, 175, 55, 0.3);}
+.logo-subtitle { color: #888888; font-size: 13px; margin-top: 5px; font-weight: 500; letter-spacing: 2px;}
 
-/* Abas estilo Pílula Dourada */
+/* ABAS ESTILO PÍLULA FLUTUANTE */
 .tabs {border: none !important; background: transparent !important;}
-.tab-nav {border-bottom: none !important; justify-content: center !important; font-size: 1.1em !important; margin-bottom: 25px; gap: 15px;}
-.tab-nav button {border-radius: 50px !important; border: 1px solid #333333 !important; padding: 12px 30px !important; background: #111111 !important; color: #FFFFFF !important; font-weight: 600; transition: all 0.3s ease;}
-.tab-nav button.selected {background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000000 !important; border: none !important; box-shadow: 0 0 15px rgba(212, 175, 55, 0.4) !important;}
+.tab-nav {border-bottom: none !important; justify-content: center !important; font-size: 1.05em !important; margin-bottom: 25px; gap: 12px; padding-top: 10px;}
+.tab-nav button {border-radius: 40px !important; border: 1px solid #222 !important; padding: 10px 26px !important; background: #0A0A0A !important; color: #999 !important; font-weight: 500; transition: all 0.3s ease;}
+.tab-nav button.selected {background: linear-gradient(145deg, #D4AF37, #B58500) !important; color: #000000 !important; border: none !important; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3) !important; font-weight: 700;}
 
-/* Painéis Altamente Arredondados */
-.box-painel {border-radius: 30px !important; padding: 30px !important; margin-bottom: 25px; background: #141414 !important; border: 1px solid #D4AF37 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important;}
+/* PAINÉIS ARREDONDADOS E LIMPOS */
+.box-painel {border-radius: 28px !important; padding: 28px !important; margin-bottom: 20px; background: #0E0E0E !important; border: 1px solid rgba(212, 175, 55, 0.1) !important; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5) !important;}
 
-/* Chat Central */
-.chat-container {border-radius: 30px !important; overflow: hidden; background: #111111 !important; border: 1px solid #333333 !important;}
-.message-wrap {border-radius: 30px !important;}
-.message {border-radius: 25px !important; padding: 18px 24px !important; font-size: 16px !important; line-height: 1.6;}
+/* CHAT CENTRAL - BOLHAS */
+.chat-container {border-radius: 28px !important; overflow: hidden; background: #0A0A0A !important; border: 1px solid rgba(255, 255, 255, 0.05) !important;}
+.message-wrap {border-radius: 28px !important;}
+.message {border-radius: 24px !important; padding: 16px 22px !important; font-size: 15.5px !important; line-height: 1.5;}
 
-/* As mensagens do usuário ganham contorno Dourado */
-.message.user {background: transparent !important; border: 1px solid #D4AF37 !important; color: #FFFFFF !important;}
-/* As mensagens da IA ganham fundo cinza escuro */
-.message.bot {background: #1A1A1A !important; border: 1px solid #333333 !important; color: #E0E0E0 !important;}
+/* Bolha do Usuário (Transparente com Borda Dourada Fina) */
+.message.user {background: rgba(212, 175, 55, 0.03) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFFFFF !important;}
+/* Bolha da IA (Cinza Escuro Clean) */
+.message.bot {background: #151515 !important; border: 1px solid #222 !important; color: #E0E0E0 !important;}
 
-/* Botões Primários Dourados */
-button.primary {background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important;}
-button.primary:hover {transform: scale(1.02); box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);}
+/* INPUTS E CAIXAS DE TEXTO */
+input, textarea { background: #111 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #fff !important;}
+input:focus, textarea:focus { border-color: #D4AF37 !important; box-shadow: 0 0 8px rgba(212, 175, 55, 0.2) !important;}
 
-/* Barras de Rolagem Douradas */
-::-webkit-scrollbar {width: 6px; height: 6px;}
-::-webkit-scrollbar-track {background: #0A0A0A;}
+/* BOTÕES PRIMÁRIOS DOURADOS */
+button.primary {background: linear-gradient(145deg, #D4AF37, #B58500) !important; color: #000000 !important; border: none !important; border-radius: 30px !important; font-weight: 700 !important;}
+button.primary:hover {transform: translateY(-2px); box-shadow: 0 6px 15px rgba(212, 175, 55, 0.3);}
+
+/* BARRAS DE ROLAGEM */
+::-webkit-scrollbar {width: 5px; height: 5px;}
+::-webkit-scrollbar-track {background: transparent;}
 ::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
 """
 
 # ==========================================
-# 7. CONSTRUÇÃO DA INTERFACE
+# 7. CONSTRUÇÃO DA INTERFACE VISUAL
 # ==========================================
-with gr.Blocks(title="Titã AI", css=css_black_gold, head=PWA_HEAD) as interface:
+with gr.Blocks(title="Código de Ouro", theme=tema_base, css=css_ouro, head=PWA_HEAD) as interface:
     
+    # --- LOGOTIPO OFICIAL DO CÓDIGO DE OURO ---
     gr.HTML("""
     <div class="logo-container">
-        <h1 class="logo-title">TITÃ AI</h1>
-        <p class="logo-subtitle">INTELIGÊNCIA MULTIMÍDIA AVANÇADA</p>
+        <h1 class="logo-title">CÓDIGO DE OURO</h1>
+        <p class="logo-subtitle">INTELIGÊNCIA ARTIFICIAL DE ALTA PERFORMANCE</p>
     </div>
     """)
     
@@ -434,7 +448,7 @@ with gr.Blocks(title="Titã AI", css=css_black_gold, head=PWA_HEAD) as interface
 
     with gr.Tabs():
         
-        # ABA 1: CHAT PRINCIPAL
+        # ABA 1: CHAT IA (OMNICHANNEL)
         with gr.TabItem("💬 Chat IA"):
             with gr.Accordion("⚙️ Configurações da IA", open=False):
                 with gr.Row():
@@ -453,7 +467,7 @@ with gr.Blocks(title="Titã AI", css=css_black_gold, head=PWA_HEAD) as interface
             btn_carregar.click(fn=carregar_sessao_chat, inputs=[lista_chats], outputs=[chat.chatbot, id_sessao_atual])
             btn_novo_chat.click(fn=iniciar_novo_chat, outputs=[chat.chatbot, id_sessao_atual, lista_chats])
             
-        # ABA 2: PROCESSAMENTO EM LOTE
+        # ABA 2: ANÁLISE DE DOCUMENTOS
         with gr.TabItem("📑 Análise de Documentos"):
             with gr.Row():
                 with gr.Column(scale=4, elem_classes="box-painel"):
@@ -466,7 +480,7 @@ with gr.Blocks(title="Titã AI", css=css_black_gold, head=PWA_HEAD) as interface
                     out_doc_lote = gr.File(label="Baixar Resultado (Word)")
             btn_lote.click(fn=gerar_dossie_lote, inputs=[arq_lote, txt_instrucao], outputs=[msg_status, out_doc_lote, txt_relatorio, msg_status])
 
-        # ABA 3: EXPLORADOR E GALERIA
+        # ABA 3: GALERIA E ARQUIVOS
         with gr.TabItem("🗂️ Galeria e Arquivos"):
             with gr.Row():
                 with gr.Column(elem_classes="box-painel"):
@@ -490,4 +504,5 @@ for i in ["", "_1", "_2", "_3"]:
     s = os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
     if u and s: lista_usuarios.append((u, s))
 
+# A propriedade JS força o fundo da página nativa do Gradio a ficar perfeitamente escuro
 interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_usuarios, js="() => document.body.classList.add('dark')")
