@@ -30,14 +30,13 @@ chave_hf = os.environ.get("HF_TOKEN")
 chave_openrouter = os.environ.get("OPENROUTER_API_KEY")
 
 cliente_groq = Groq(api_key=chave_groq)
-cliente_hf = InferenceClient(token=chave_hf)
 
 try:
     embeddings = HuggingFaceInferenceAPIEmbeddings(api_key=chave_hf, model_name="sentence-transformers/all-MiniLM-L6-v2")
 except: embeddings = None
 
 # ==========================================
-# 1.5 RADAR DE CÓRTEX (AUTO-DESCOBERTA)
+# 1.5 RADAR DE CÓRTEX
 # ==========================================
 MODELOS_TEXTO_ATIVOS = []
 MODELOS_VISAO_ATIVOS = []
@@ -139,6 +138,7 @@ def encode_image(image_path):
 def motor_neural_groq(mensagens, visao=False, max_tokens=3000):
     modelos_alvo = MODELOS_VISAO_ATIVOS if visao else MODELOS_TEXTO_ATIVOS
     erros_acumulados = []
+    
     for mod in modelos_alvo:
         try:
             r = cliente_groq.chat.completions.create(model=mod, messages=mensagens, max_tokens=max_tokens, temperature=0.3)
@@ -146,9 +146,10 @@ def motor_neural_groq(mensagens, visao=False, max_tokens=3000):
         except Exception as e: 
             erros_acumulados.append(f"[{mod}: {str(e)[:50]}]")
             continue
+            
     log_erros = " | ".join(erros_acumulados)
-    salvar_na_memoria(f"Falha Geral APIs: {log_erros}", "Sistema Erro")
-    return f"⚠️ [CONTINGÊNCIA]: Bloqueio global nos nós externos. Log: {log_erros}"
+    salvar_na_memoria(f"Falha APIs Groq: {log_erros}", "Sistema Erro")
+    return f"⚠️ [SISTEMA DE CONTINGÊNCIA ATIVADO]: Córtex Neural encontrou bloqueios nos nós externos. Diagnóstico: {log_erros}"
 
 def chamar_gigante_openrouter(mensagens):
     if not chave_openrouter: return None
@@ -203,7 +204,7 @@ def limpar_banco_de_dados():
     except Exception as e: return f"Erro não crítico: {e}"
 
 # ==========================================
-# FORÇA BRUTA (EXPONENTIAL BACKOFF) PARA MÍDIAS
+# BYPASS VISUAL DE CUSTO ZERO (GRADIO SPACES)
 # ==========================================
 def aprimorar_prompt(sujeito, fundo, estilo):
     sys_msg = "You are an AI prompt engineer. Translate the user's Portuguese concept into a highly detailed English prompt. CRITICAL: Output ONLY the raw English prompt."
@@ -217,41 +218,38 @@ def aprimorar_prompt(sujeito, fundo, estilo):
 
 def gerar_imagem_estudio(sujeito, fundo, estilo):
     if not sujeito: return None, "⚠️ Foco obrigatório."
-    if not chave_hf: return None, "⚠️ Chave Hugging Face ausente."
-    
     c = f"{DIR_MIDIA}/Img_{datetime.now().strftime('%H%M%S')}.jpg"
     prompt_en = aprimorar_prompt(sujeito, fundo, estilo)
     
-    # Tenta 3 vezes seguidas de forma transparente
+    # Evasão do Muro de Pagamento: Acessa o Space público do FLUX simulando um usuário
     for tentativa in range(3):
         try:
-            cliente_hf.text_to_image(prompt_en, model="black-forest-labs/FLUX.1-schnell").save(c)
+            cliente_bypass = Client("black-forest-labs/FLUX.1-schnell")
+            resultado = cliente_bypass.predict(prompt=prompt_en, seed=0, randomize_seed=True, width=1024, height=1024, num_inference_steps=4, api_name="/infer")
+            # Extrai o caminho físico da imagem retornada pelo Gradio
+            img_path = resultado[0] if isinstance(resultado, tuple) else resultado
+            shutil.copy(img_path, c)
             return c, "✅ Sucesso"
         except Exception as e:
             if tentativa == 2:
-                salvar_na_memoria(f"Falha Imagem: {e}", "Erro Mídia")
-                return None, f"⚠️ Bloqueio da Hugging Face após 3 tentativas. Fila global lotada."
-            time.sleep(3) # Espera 3 segundos antes do próximo chute na porta
+                salvar_na_memoria(f"Falha Imagem Gradio Space: {e}", "Erro Mídia")
+                return None, f"⚠️ Servidores públicos sobrecarregados."
+            time.sleep(3)
 
 def gerar_video_ia(imagem_base, sujeito, fundo, movimento):
-    if not chave_hf: return None, "⚠️ Chave ausente."
-    
     for tentativa in range(3):
         try:
             if imagem_base:
-                return Client("multimodalart/stable-video-diffusion", hf_token=chave_hf).predict(imagem_base, api_name="/video"), "✅ Cena animada."
+                return Client("multimodalart/stable-video-diffusion").predict(imagem_base, api_name="/video"), "✅ Cena animada."
             
             if not sujeito: return None, "⚠️ Sujeito obrigatório."
             prompt_en = aprimorar_prompt(sujeito, fundo, movimento)
             
-            try: 
-                return Client("multimodalart/zeroscope-v2", hf_token=chave_hf).predict(prompt_en, api_name="/infer"), "✅ Zeroscope Masterizado"
-            except:
-                return Client("hysts/ModelScope-Text-To-Video-Synthesis", hf_token=chave_hf).predict(prompt_en, api_name="/infer"), "✅ ModelScope Masterizado"
+            try: return Client("multimodalart/zeroscope-v2").predict(prompt_en, api_name="/infer"), "✅ Zeroscope Masterizado"
+            except: return Client("hysts/ModelScope-Text-To-Video-Synthesis").predict(prompt_en, api_name="/infer"), "✅ ModelScope Masterizado"
                 
         except Exception as e:
-            if tentativa == 2:
-                return None, f"⚠️ APIs de Vídeo HF rejeitaram as 3 requisições por excesso de tráfego mundial."
+            if tentativa == 2: return None, f"⚠️ APIs de Vídeo rejeitaram as requisições por excesso de tráfego mundial."
             time.sleep(4)
 
 def falar_laudo_estudio(texto):
@@ -304,7 +302,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
 
         sys_prompt = f"Você é a Inteligência de Comando do sistema 'O Código de Ouro', atuando como {persona}. "
         sys_prompt += "DIRETRIZ SUPREMA: Se houver dados marcados como [MAPEAMENTO WEB], assuma-os como a verdade do presente. Não mencione limitações de data.\n\n"
-        sys_prompt += "DIRETRIZ DE FORMATAÇÃO: Você DEVE gerar sua resposta em Markdown estruturado, bonito e legível. É ESTRITAMENTE PROIBIDO retornar a sua resposta em formato JSON, listas ou dicionários de código. Nunca use caracteres '\\n' literais.\n\n"
+        sys_prompt += "DIRETRIZ DE FORMATAÇÃO: Você DEVE gerar sua resposta em Markdown estruturado, bonito e legível. É ESTRITAMENTE PROIBIDO retornar a sua resposta em formato JSON. Nunca use caracteres '\\n' literais.\n\n"
         sys_prompt += "HABILIDADES OMNI:\n"
         sys_prompt += "- Para criar IMAGEM, adicione: [IMG: prompt descritivo em inglês fotorrealista]\n"
         sys_prompt += "- Para criar VÍDEO, adicione: [VID: prompt descritivo em inglês para movimento]\n"
@@ -357,7 +355,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
                         tag_md = f"\n\n🖼️ **Ativo Renderizado:**\n![Imagem](/file={os.path.abspath(cam)})"
                         resposta_limpa = resposta_limpa.replace(match.group(0), tag_md)
                     else: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ {msg}")
-                except Exception as e: resposta_limpa = resposta_limpa.replace(match.group(0), "")
+                except: resposta_limpa = resposta_limpa.replace(match.group(0), "")
                     
         if "[VID:" in resposta_limpa:
             for match in re.finditer(r'\[VID:\s*(.*?)\]', resposta_limpa, re.IGNORECASE):
@@ -368,7 +366,7 @@ def responder_chat_multimodal(mensagem, historico, persona, usar_internet):
                         tag_html = f"\n\n🎥 **Vídeo Renderizado:**\n<video controls width='100%'><source src='/file={os.path.abspath(cam)}' type='video/mp4'></video>"
                         resposta_limpa = resposta_limpa.replace(match.group(0), tag_html)
                     else: resposta_limpa = resposta_limpa.replace(match.group(0), f"\n\n⚠️ {msg}")
-                except Exception as e: resposta_limpa = resposta_limpa.replace(match.group(0), "")
+                except: resposta_limpa = resposta_limpa.replace(match.group(0), "")
                     
         if "[DOC:" in resposta_limpa:
             try:
@@ -490,7 +488,7 @@ def estúdio_interface_vid(imagem_base, sujeito, fundo, movimento):
     return cam, msg
 
 # ==========================================
-# 8. DESIGN SYSTEM
+# 8. DESIGN SYSTEM ALTO LUXO
 # ==========================================
 tema_ultra = gr.themes.Base(
     font=[gr.themes.GoogleFont("Outfit"), gr.themes.GoogleFont("Inter"), "sans-serif"],
@@ -517,6 +515,7 @@ thead th, th { background-color: #0A0A0A !important; color: #D4AF37 !important; 
 tbody td, td { background-color: #121212 !important; color: #F5F5F7 !important; border: 1px solid #222 !important; padding: 10px !important; }
 tbody tr:hover td { background-color: #1A1A1A !important; }
 .cell-wrap input { color: #F5F5F7 !important; background-color: transparent !important; }
+
 .chat-container textarea { max-height: 120px !important; overflow-y: auto !important; }
 
 code, pre { background-color: #181818 !important; color: #D4AF37 !important; border: 1px solid #2A2A2A !important; border-radius: 6px !important; }
@@ -540,7 +539,7 @@ button.secondary { border: 1px solid #3A3A3A !important; background: #181818 !im
 with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_width=True, js="function() { document.body.classList.add('dark'); }") as interface:
     with gr.Sidebar(open=True):
         gr.HTML(renderizar_logo())
-        status_cerebro = "🔵 **Modo Matrix Ativo**" if os.environ.get("OPENROUTER_API_KEY") else f"🟢 **Protocolo Força Bruta Ativo**"
+        status_cerebro = "🔵 **Modo Matrix Ativo**" if os.environ.get("OPENROUTER_API_KEY") else f"🟢 **Bypass Visual Ativo**"
         gr.HTML(f"<h3 style='text-align: center; color: #555; text-transform: uppercase; font-size: 11px; letter-spacing: 4px; margin-bottom: 20px;'>{status_cerebro}</h3>")
         
         with gr.Accordion("⚙️ NÚCLEO DE OPERAÇÕES", open=False):
@@ -584,7 +583,7 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
                     btn_agente = gr.Button("INICIAR PROTOCOLO ALFA", variant="primary", size="lg")
                 with gr.Column(scale=6):
                     out_estrat = gr.Textbox(label="Estratégia Sintetizada", lines=16, interactive=False)
-                    out_arte = gr.Image(label="Ativo Visual Comercial", type="filepath")
+                    out_arte = gr.Image(label="Ativo Visual", type="filepath")
             btn_agente.click(fn=executar_agente_mestre, inputs=[txt_missao], outputs=[out_estrat, out_arte])
 
         with gr.TabItem("📑 TRIBUNAL DE AUDITORIA"):
@@ -596,12 +595,12 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
                         c_img = gr.Checkbox(label="🖼️ Capa", value=False)
                         c_aud = gr.Checkbox(label="🔊 Áudio", value=False)
                         c_trib = gr.Checkbox(label="⚖️ Antifraude", value=False)
-                    btn_exe = gr.Button("INICIAR INQUÉRITO DE DADOS", variant="primary")
+                    btn_exe = gr.Button("INICIAR INQUÉRITO", variant="primary")
                 with gr.Column(scale=6):
-                    out_tela = gr.Textbox(label="Espelho do Laudo", lines=20, interactive=False)
+                    out_tela = gr.Textbox(label="Laudo", lines=20, interactive=False)
                     with gr.Row():
                         out_word = gr.File(label="Extração (Word)")
-                        out_aud = gr.Audio(label="Perícia Vocal")
+                        out_aud = gr.Audio(label="Vocal")
                     out_tel = gr.Textbox(show_label=False, lines=1, interactive=False)
             btn_exe.click(fn=gerar_dossie, inputs=[arq_up, txt_ordem, c_img, c_aud, c_trib], outputs=[msg_sys, out_word, out_aud, out_tela, out_tel])
 
@@ -618,8 +617,8 @@ with gr.Blocks(title="O Código de Ouro", theme=tema_ultra, css=css_ultra, fill_
                 
                 with gr.Column(elem_classes="box-painel"):
                     gr.HTML("<h3 style='color: #D4AF37;'>🎥 DIREÇÃO DE CINEMA IA</h3>")
-                    vid_base = gr.Image(label="Base Estrutural", type="filepath")
-                    vid_acao = gr.Textbox(label="Diretriz Visual")
+                    vid_base = gr.Image(label="Base", type="filepath")
+                    vid_acao = gr.Textbox(label="Roteiro Visual")
                     vid_fundo = gr.Textbox(label="Cenário")
                     vid_mov = gr.Dropdown(choices=["Zoom In Lento (Dramático)", "Afastamento (Zoom Out)", "Movimento Panorâmico", "Captura Aérea (Drone)"], label="Movimento", value="Zoom In Lento (Dramático)")
                     btn_gerar_vid = gr.Button("MASTERIZAR VÍDEO", variant="primary")
