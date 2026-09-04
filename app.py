@@ -240,7 +240,7 @@ PODERES EXECUTIVOS NO CHAT:
         cam_gerada = motor_gerar_imagem(prompt_i, prop_i)
         if cam_gerada:
             b64_img = encode_file_b64(cam_gerada)
-            anexos_html += f"\n\n**🖼️ Imagem Gerada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:15px; border: 1px solid rgba(212,175,55,0.4); margin-top:10px;' />\n"
+            anexos_html += f"\n\n**🖼️ Imagem Gerada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; height:auto; border-radius:15px; border: 1px solid rgba(212,175,55,0.4); margin-top:10px;' />\n"
 
     match_edit = re.search(r'\[AÇÃO_EDITAR_IMAGEM:\s*(.*?)\]', resposta_acumulada)
     if match_edit and imagens_anexadas:
@@ -248,7 +248,7 @@ PODERES EXECUTIVOS NO CHAT:
         cam_edit = motor_editar_imagem(imagens_anexadas[-1], prompt_e)
         if cam_edit:
             b64_img = encode_file_b64(cam_edit)
-            anexos_html += f"\n\n**✨ Imagem Editada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:15px; border: 1px solid rgba(212,175,55,0.4); margin-top:10px;' />\n"
+            anexos_html += f"\n\n**✨ Imagem Editada:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; height:auto; border-radius:15px; border: 1px solid rgba(212,175,55,0.4); margin-top:10px;' />\n"
 
     match_aud = re.search(r'\[AÇÃO_AUDIO:\s*(.*?)\]', resposta_acumulada)
     if match_aud:
@@ -335,7 +335,7 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
     except Exception as e: return f"Erro: {e}", None, "", ""
 
 # ==========================================
-# 6. DESIGN SYSTEM: WORKSTATION DOLA/CHATGPT
+# 6. DESIGN SYSTEM: WORKSTATION RESPONSIVA
 # ==========================================
 
 tema_ouro = gr.themes.Soft(
@@ -349,68 +349,112 @@ tema_ouro = gr.themes.Soft(
     block_border_width="0px"
 )
 
-# LOGIN HACK (Com Injeção Inteligente da Logo)
-LOGIN_HACK = f"""
-<style>
-    body, main, .wrap {{ background-color: #000000 !important; color: #fff !important;}}
-    form {{ background: #0A0A0A !important; border: 1px solid rgba(212, 175, 55, 0.4) !important; border-radius: 30px !important; box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important; padding: 40px !important; max-width: 420px !important; margin: auto !important; }}
-    button.primary {{ background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000000 !important; font-weight: 800 !important; text-transform: uppercase !important; border-radius: 30px !important; border: none !important; font-size: 16px !important; letter-spacing: 1px !important; margin-top: 15px !important; transition: 0.3s !important;}}
-    button.primary:hover {{ transform: scale(1.02); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5) !important; }}
-    input {{ background-color: #111111 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #D4AF37 !important; padding: 12px !important; }}
-    input:focus {{ border-color: #D4AF37 !important; outline: none !important; }}
-    form h2 {{ display: none !important; }}
-</style>
-<div style="text-align: center; margin-bottom: 30px;">
-    {TAG_LOGO}
-    <h1 style="color: #D4AF37; font-size: 38px; font-weight: 900; margin: 0; letter-spacing: 4px; font-family: 'Inter', sans-serif; text-shadow: 0px 4px 25px rgba(212, 175, 55, 0.4);">CÓDIGO DE OURO</h1>
-    <p style="color: #666; font-size: 12px; margin-top: 5px; font-weight: 700; letter-spacing: 3px;">ACESSO RESTRITO</p>
-</div>
+# Trava de App Nativo para Celular (Evita zoom e overflow)
+PWA_HEAD = """
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 """
 
-CSS_APP = """
-footer {display: none !important;}
-body, html { margin: 0 !important; padding: 0 !important; background-color: #000000 !important; }
+LOGIN_HACK = """
+<style>
+    body, main, .wrap { background-color: #000000 !important; color: #fff !important;}
+    form { background: #0A0A0A !important; border: 1px solid rgba(212, 175, 55, 0.4) !important; border-radius: 30px !important; box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important; padding: 40px !important; max-width: 90% !important; margin: auto !important; }
+    button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000000 !important; font-weight: 800 !important; text-transform: uppercase !important; border-radius: 30px !important; border: none !important; font-size: 16px !important; letter-spacing: 1px !important; margin-top: 15px !important; transition: 0.3s !important;}
+    button.primary:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5) !important; }
+    input { background-color: #111111 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #D4AF37 !important; padding: 12px !important; }
+    input:focus { border-color: #D4AF37 !important; outline: none !important; }
+    form h2 { display: none !important; }
+</style>
+<div style="text-align: center; margin-bottom: 30px;">
+    [LOGO_PLACEHOLDER]
+    <h1 style="color: #D4AF37; font-size: clamp(24px, 6vw, 38px); font-weight: 900; margin: 0; letter-spacing: 2px; font-family: 'Inter', sans-serif; text-shadow: 0px 4px 25px rgba(212, 175, 55, 0.4);">CÓDIGO DE OURO</h1>
+    <p style="color: #666; font-size: 12px; margin-top: 5px; font-weight: 700; letter-spacing: 3px;">ACESSO RESTRITO</p>
+</div>
+""".replace("[LOGO_PLACEHOLDER]", TAG_LOGO)
 
-.gradio-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+CSS_APP = """
+/* PREVINE VAZAMENTO NO MOBILE E TRAVA X */
+body, html { margin: 0 !important; padding: 0 !important; background-color: #000000 !important; overflow-x: hidden !important; max-width: 100vw !important;}
+footer {display: none !important;}
+
+/* CONTAINER PRINCIPAL E BOTÕES FIXOS */
+.gradio-container { max-width: 100vw !important; border: none !important; overflow-x: hidden !important; box-sizing: border-box !important;}
 .contain { padding: 0 !important; }
+
+/* REVELA E ESTILIZA O BOTÃO DE ABRIR SIDEBAR */
+button[aria-label="Open sidebar"], button[title="Open sidebar"], .sidebar-button {
+    background-color: #0E0E0E !important;
+    border: 1px solid #D4AF37 !important;
+    border-radius: 50% !important;
+    z-index: 99999 !important;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important;
+    left: 15px !important; 
+    top: 15px !important;
+}
+button[aria-label="Open sidebar"] svg, button[title="Open sidebar"] svg {
+    color: #D4AF37 !important;
+    stroke: #D4AF37 !important;
+}
 
 /* SIDEBAR NATIVA */
 .sidebar { background-color: #050505 !important; border-right: 1px solid #111 !important; width: 280px !important; padding: 20px !important; }
-.logo-container { text-align: center; padding: 10px 0 30px 0; border-bottom: 1px solid #111; margin-bottom: 20px;}
+.logo-container { text-align: center; padding: 10px 0 20px 0; border-bottom: 1px solid #111; margin-bottom: 20px;}
 .logo-title { color: #D4AF37; font-size: 22px; font-weight: 900; margin: 0; letter-spacing: 2px; text-shadow: 0 0 15px rgba(212,175,55,0.2);}
 
+/* BOTOES SECUNDARIOS DARK */
+button.secondary, .dropdown { background-color: #111 !important; color: #CCC !important; border: 1px solid #333 !important; border-radius: 15px !important; transition: 0.3s !important;}
+button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !important; }
+
 /* ABAS SUPERIORES */
-.tabs { margin-top: 0 !important; border: none !important; }
-.tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 15px !important;}
-.tab-nav button { background: transparent !important; color: #666 !important; border: none !important; border-radius: 20px !important; padding: 8px 25px !important; font-size: 15px !important;}
+.tabs { margin-top: 0 !important; border: none !important; width: 100vw !important;}
+.tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 10px !important;}
+.tab-nav button { background: transparent !important; color: #666 !important; border: none !important; border-radius: 20px !important; padding: 8px 15px !important; font-size: 14px !important;}
 .tab-nav button.selected { color: #D4AF37 !important; background: #0A0A0A !important; border: 1px solid #222 !important; font-weight: bold;}
 
 /* CHAT CENTRAL */
-.chat-container { background: transparent !important; border: none !important; height: 85vh !important; }
-.chatbot { background: transparent !important; border: none !important; max-width: 900px !important; margin: 0 auto !important; width: 100% !important; }
+.chat-container { background: transparent !important; border: none !important; height: 82vh !important; }
+.chatbot { background: transparent !important; border: none !important; max-width: 900px !important; margin: 0 auto !important; width: 100% !important; overflow-x: hidden !important;}
 
 /* BALÕES DE MENSAGEM */
 .message-wrap { padding: 20px 0 !important; }
-.message { border-radius: 20px !important; padding: 15px 25px !important; font-size: 16px !important; line-height: 1.6; max-width: 80% !important; }
+.message { border-radius: 20px !important; padding: 15px 20px !important; font-size: 16px !important; line-height: 1.6; max-width: 85% !important; word-wrap: break-word !important;}
 .message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFFFFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
 .message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important;}
 
 /* A PÍLULA FLUTUANTE DE DIGITAR MENSAGEM */
 .chat-container > div:last-child, .chat-container form { 
     background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; 
-    padding: 5px 15px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; 
-    max-width: 850px !important; margin: 0 auto 20px auto !important; width: 100% !important; 
+    padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; 
+    max-width: 900px !important; margin: 0 auto 15px auto !important; width: 95% !important; box-sizing: border-box !important;
 }
 .chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; }
 .chat-container textarea:focus { border: none !important; box-shadow: none !important; }
 
 button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
 button.primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
-input, .dropdown { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; }
+input { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; max-width: 100% !important;}
 
 ::-webkit-scrollbar {width: 6px; height: 6px;}
 ::-webkit-scrollbar-track {background: transparent;}
 ::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
+
+/* ================= MEDIA QUERIES MOBILE (MÁGICA DA ADAPTAÇÃO) ================= */
+@media screen and (max-width: 768px) {
+    .logo-title { font-size: 18px !important; letter-spacing: 1px !important;}
+    .sidebar { width: 100vw !important; padding: 10px !important; border-right: none !important; }
+    
+    .chat-container { height: 78vh !important; }
+    .message { max-width: 92% !important; font-size: 15px !important; padding: 12px 18px !important; }
+    
+    .chat-container > div:last-child, .chat-container form { 
+        width: 98% !important; 
+        max-width: 98% !important; 
+        margin: 0 auto 10px auto !important; 
+        border-radius: 25px !important;
+    }
+}
 """
 
 # ==========================================
@@ -428,10 +472,11 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interfa
         </div>
         """)
         btn_novo = gr.Button("➕ Novo Chat", variant="primary")
-        gr.Markdown("<br>### 📜 Histórico")
+        gr.Markdown("### 📜 Histórico de Conversas")
         lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), label="", interactive=True)
-        btn_load = gr.Button("Abrir Conversa")
-        gr.Button("🔄 Atualizar Histórico").click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
+        btn_load = gr.Button("Abrir Conversa", variant="secondary")
+        btn_atualizar = gr.Button("🔄 Atualizar Histórico", variant="secondary")
+        btn_atualizar.click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
 
     with gr.Tabs():
         
@@ -480,5 +525,6 @@ interface.launch(
     server_port=int(os.environ.get("PORT", 10000)),
     auth=usuarios if usuarios else None,
     auth_message=LOGIN_HACK, 
-    js="() => { document.body.classList.add('dark'); }"
+    js="() => { document.body.classList.add('dark'); }",
+    head=PWA_HEAD # <-- AQUI ESTÁ A TRAVA MOBILE
 )
