@@ -1,11 +1,14 @@
 gradio
 pandas
+openpyxl
 python-docx
 pdfplumber
 groq
 langchain-text-splitters
 langchain-community
 langchain-chroma
-huggingface_hub
-edge-tts
 duckduckgo-search
+gradio-client
+huggingface-hub
+sentence-transformers
+edge-tts
