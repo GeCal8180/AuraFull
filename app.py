@@ -362,7 +362,7 @@ PWA_HEAD = f"""
 
 LOGIN_HACK = """
 <style>
-    body, main, .wrap { background-color: #000 !important; color: #fff !important; margin: 0; padding: 0; width: 100%; overflow-x: hidden;}
+    body, main, .wrap { background-color: #000 !important; color: #fff !important; }
     form { background: #0A0A0A !important; border: 1px solid rgba(212,175,55,0.4) !important; border-radius: 30px !important; box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important; padding: 40px !important; max-width: 90% !important; margin: auto !important; width: 400px;}
     button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; font-weight: 800 !important; border-radius: 30px !important; border: none !important; font-size: 16px !important; margin-top: 15px !important; transition: 0.3s !important; width: 100%;}
     button.primary:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(212,175,55,0.5) !important; }
@@ -376,58 +376,58 @@ LOGIN_HACK = """
 </div>
 """.replace("[LOGO_PLACEHOLDER]", TAG_LOGO)
 
+# CSS Totalmente Seguro: Sem travas globais de Box-Sizing.
 CSS_APP = """
-body, html { margin: 0 !important; padding: 0 !important; background-color: #000 !important; overflow-x: hidden !important; width: 100% !important; height: 100% !important; }
-footer {display: none !important;}
-.gradio-container { max-width: 100% !important; width: 100% !important; border: none !important; overflow-x: hidden !important; margin: 0 !important; padding: 0 !important;}
-.contain { padding: 0 !important; width: 100% !important;}
+body, html { background-color: #000 !important; color: #fff !important; }
+footer { display: none !important; }
+
+/* Correção Dropdown / Backgrounds Brancos */
+.dropdown-menu, .options { background-color: #111 !important; color: #fff !important; border-color: #333 !important; }
+
+/* Botão da Sidebar Fixo e Imune */
 .sidebar-button, button[aria-label*="sidebar" i], button[title*="sidebar" i] { position: fixed !important; top: 15px !important; left: 15px !important; background-color: #0E0E0E !important; border: 1px solid #D4AF37 !important; border-radius: 50% !important; z-index: 999999 !important; box-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important; width: 45px !important; height: 45px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;}
 .sidebar-button svg, button[aria-label*="sidebar" i] svg, button[title*="sidebar" i] svg { color: #D4AF37 !important; stroke: #D4AF37 !important; fill: transparent !important; width: 22px !important; height: 22px !important;}
-.sidebar { background-color: #050505 !important; border-right: 1px solid #111 !important; width: 280px !important; padding: 20px !important; height: 100vh !important; }
+
+/* Sidebar Design */
+.sidebar { background-color: #050505 !important; border-right: 1px solid #111 !important; padding: 20px !important;}
 .logo-container { text-align: center; padding: 10px 0 20px 0; border-bottom: 1px solid #111; margin-bottom: 20px; width: 100%;}
 .logo-title { color: #D4AF37; font-size: 22px; font-weight: 900; margin: 0; letter-spacing: 2px;}
-button.secondary, .dropdown { background-color: #111 !important; color: #CCC !important; border: 1px solid #333 !important; border-radius: 15px !important; transition: 0.3s !important;}
+
+/* Estilos de Botão e Abas */
+button.secondary { background-color: #111 !important; color: #CCC !important; border: 1px solid #333 !important; border-radius: 15px !important; transition: 0.3s !important;}
 button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !important; }
-.tabs { margin-top: 0 !important; border: none !important; width: 100% !important; }
-.tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 10px !important; width: 100%; flex-wrap: wrap;}
+.tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 10px !important; flex-wrap: wrap;}
 .tab-nav button { background: transparent !important; color: #666 !important; border: none !important; border-radius: 20px !important; padding: 8px 15px !important; font-size: 14px !important;}
 .tab-nav button.selected { color: #D4AF37 !important; background: #0A0A0A !important; border: 1px solid #222 !important; font-weight: bold;}
-.chat-container { display: flex !important; flex-direction: column !important; height: 85vh !important; width: 100% !important; background: transparent !important; border: none !important; }
-.chatbot { flex-grow: 1 !important; background: transparent !important; border: none !important; max-width: 900px !important; margin: 0 auto !important; width: 100% !important; overflow-x: hidden !important;}
-.message-wrap { padding: 20px 0 !important; width: 100% !important;}
-.message { border-radius: 20px !important; padding: 15px 20px !important; font-size: 16px !important; line-height: 1.6; max-width: 85% !important; word-wrap: break-word !important; word-break: break-word !important;}
+
+/* Chat e Balões */
+.message-wrap { padding: 20px 0 !important; }
+.message { border-radius: 20px !important; padding: 15px 20px !important; font-size: 16px !important; line-height: 1.6; max-width: 85% !important; word-wrap: break-word !important; }
 .message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
 .message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important;}
-.chat-container > div:last-child, .chat-container form { background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; max-width: 900px !important; width: 96% !important; margin: 0 auto 15px auto !important; }
-.chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; width: 100% !important;}
+
+/* Input Flutuante e Outros Inputs */
+.chat-container > div:last-child, .chat-container form { background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; max-width: 900px !important; margin: 0 auto 15px auto !important; }
+.chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; }
 .chat-container textarea:focus { border: none !important; box-shadow: none !important; }
-
-/* ANIMAÇÃO MIC GLOBAL */
-#bot-mic-global { transition: all 0.3s ease; }
-#bot-mic-global:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(212,175,55,0.8) !important; }
-@keyframes pulse-anim-global { 
-    0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.8); background: #ff4444; color: #fff;} 
-    70% { box-shadow: 0 0 15px 25px rgba(255, 68, 68, 0); background: #cc0000; color: #fff;} 
-    100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); background: #ff4444; color: #fff;} 
-}
-.pulse-anim-global { animation: pulse-anim-global 1.5s infinite !important; }
-
 button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
 button.primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
-input { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; width: 100% !important;}
+input { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important;}
+
 ::-webkit-scrollbar {width: 6px; height: 6px;}
 ::-webkit-scrollbar-track {background: transparent;}
 ::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
 
+/* Responsividade Mobile Suave */
 @media screen and (max-width: 768px) {
-    .sidebar { width: 100% !important; height: 100% !important; position: fixed !important; z-index: 9999999 !important; border-right: none !important; }
-    .chat-container { height: 80vh !important; width: 100% !important;}
+    .sidebar { width: 100% !important; position: fixed !important; z-index: 9999999 !important; border-right: none !important; }
     .message { max-width: 95% !important; font-size: 15px !important; padding: 12px 15px !important; }
     .chat-container > div:last-child, .chat-container form { width: 94% !important; max-width: 94% !important; border-radius: 25px !important; }
     .tab-nav button { padding: 6px 10px !important; font-size: 13px !important; }
 }
 """
 
+# INJEÇÃO JS: O BOTÃO DE VOZ (Agora independente e animado)
 JS_CODE = """
 function() {
     document.body.classList.add('dark');
@@ -437,19 +437,18 @@ function() {
         
         const btn = document.createElement('button');
         btn.id = 'bot-mic-global';
-        btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
+        btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
         
-        // Posição cravada no canto inferior direito para não travar o Gradio
+        // Botão flutuante seguro
         btn.style.position = 'fixed';
-        btn.style.bottom = '100px'; 
+        btn.style.bottom = '20px'; 
         btn.style.right = '20px';
-        btn.style.width = '60px';
-        btn.style.height = '60px';
+        btn.style.width = '55px';
+        btn.style.height = '55px';
         btn.style.borderRadius = '50%';
         btn.style.background = 'linear-gradient(145deg, #D4AF37, #AA7C11)';
-        btn.style.color = '#000';
         btn.style.border = 'none';
-        btn.style.boxShadow = '0 10px 25px rgba(0,0,0,0.8)';
+        btn.style.boxShadow = '0 5px 20px rgba(212,175,55,0.4)';
         btn.style.zIndex = '9999999';
         btn.style.cursor = 'pointer';
         btn.style.display = 'flex';
@@ -474,19 +473,19 @@ function() {
             
             recognition.onstart = () => { 
                 isRecording = true; 
-                btn.classList.add('pulse-anim-global'); 
+                btn.style.background = '#ff4444';
+                btn.style.boxShadow = '0 5px 20px rgba(255,68,68,0.8)';
             };
             
             recognition.onresult = (event) => {
                 let text = event.results[0][0].transcript;
                 
-                // Encontra a caixa de texto que está ativa na tela naquele momento
+                // Acha a caixa de texto na tela e injeta a voz lá
                 let activeInput = null;
                 const textareas = document.querySelectorAll('textarea');
                 textareas.forEach(ta => {
                     if (ta.offsetParent !== null) activeInput = ta; 
                 });
-                
                 if (!activeInput) {
                     const inputs = document.querySelectorAll('input[type="text"]');
                     inputs.forEach(i => {
@@ -502,19 +501,21 @@ function() {
             
             recognition.onend = () => { 
                 isRecording = false; 
-                btn.classList.remove('pulse-anim-global'); 
+                btn.style.background = 'linear-gradient(145deg, #D4AF37, #AA7C11)';
+                btn.style.boxShadow = '0 5px 20px rgba(212,175,55,0.4)';
             };
             
             recognition.onerror = () => {
                 isRecording = false; 
-                btn.classList.remove('pulse-anim-global'); 
+                btn.style.background = 'linear-gradient(145deg, #D4AF37, #AA7C11)';
+                btn.style.boxShadow = '0 5px 20px rgba(212,175,55,0.4)';
             }
         } else {
             btn.style.display = 'none';
-            console.log("Navegador não suporta transcrição.");
         }
     }
     
+    // Inicia e mantem o botão vivo na tela
     setTimeout(setupMic, 1000);
     setInterval(setupMic, 3000);
 }
@@ -523,13 +524,12 @@ function() {
 # ==========================================
 # 7. CONSTRUÇÃO DA INTERFACE VISUAL
 # ==========================================
-# O JS e o HEAD agora são passados corretamente dentro do gr.Blocks, que é a forma blindada.
 with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP, head=PWA_HEAD, js=JS_CODE) as interface:
     id_sessao_atual = gr.State(f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}")
 
     with gr.Sidebar(open=True):
         gr.HTML(f"""
-        <div class="logo-container" style="width: 100%;">
+        <div class="logo-container">
             {TAG_LOGO}
             <h1 class="logo-title">CÓDIGO DE OURO</h1>
         </div>
@@ -549,9 +549,11 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP, head=PWA_H
                     net = gr.Checkbox(label="🌐 Web", scale=1)
                     btn_exportar = gr.Button("💾 Exportar", variant="secondary", scale=1)
             
+            # Altura ajustada com a propriedade nativa do Gradio
             chat = gr.ChatInterface(
                 fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
-                chatbot=gr.Chatbot(show_label=False), textbox=gr.MultimodalTextbox(placeholder="Envie uma mensagem...", container=False)
+                chatbot=gr.Chatbot(height="70vh", show_label=False), 
+                textbox=gr.MultimodalTextbox(placeholder="Envie uma mensagem...", container=False)
             )
             arq_exportado = gr.File(label="Arquivo", visible=False)
             btn_exportar.click(exportar_conversa_docx, chat.chatbot, arq_exportado).then(lambda: gr.update(visible=True), None, arq_exportado)
