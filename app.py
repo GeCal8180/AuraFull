@@ -342,8 +342,8 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
 # ==========================================
 
 tema_ouro = gr.themes.Soft(font=[gr.themes.GoogleFont("Inter"), "sans-serif"]).set(
-    body_background_fill="#000", body_background_fill_dark="#000",
-    background_fill_primary="#000", background_fill_primary_dark="#000",
+    body_background_fill="#000000", body_background_fill_dark="#000000",
+    background_fill_primary="#000000", background_fill_primary_dark="#000000",
     background_fill_secondary="#050505", background_fill_secondary_dark="#050505",
     block_background_fill="#050505", block_background_fill_dark="#050505",
     border_color_primary="#1A1A1A", border_color_primary_dark="#1A1A1A",
@@ -376,15 +376,26 @@ LOGIN_HACK = """
 </div>
 """.replace("[LOGO_PLACEHOLDER]", TAG_LOGO)
 
-# CSS Totalmente Seguro: Sem travas globais de Box-Sizing.
 CSS_APP = """
-body, html { background-color: #000 !important; color: #fff !important; }
+body, html { background-color: #000000 !important; color: #fff !important; }
 footer { display: none !important; }
 
-/* Correção Dropdown / Backgrounds Brancos */
-.dropdown-menu, .options { background-color: #111 !important; color: #fff !important; border-color: #333 !important; }
+/* FIX DO CHECKBOX DOURADO (Botão WEB) */
+input[type="checkbox"] {
+    appearance: auto !important;
+    -webkit-appearance: auto !important;
+    accent-color: #D4AF37 !important;
+    width: 18px !important;
+    height: 18px !important;
+    cursor: pointer !important;
+    margin-right: 5px !important;
+    transform: scale(1.2) !important;
+}
 
-/* Botão da Sidebar Fixo e Imune */
+/* Correção Dropdown Escuro e Inputs */
+.gradio-dropdown input, .gradio-dropdown select, .gradio-dropdown .wrap, .dropdown-menu, .options { background-color: #111 !important; color: #fff !important; border-color: #333 !important; }
+
+/* Botão da Sidebar Fixo */
 .sidebar-button, button[aria-label*="sidebar" i], button[title*="sidebar" i] { position: fixed !important; top: 15px !important; left: 15px !important; background-color: #0E0E0E !important; border: 1px solid #D4AF37 !important; border-radius: 50% !important; z-index: 999999 !important; box-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important; width: 45px !important; height: 45px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;}
 .sidebar-button svg, button[aria-label*="sidebar" i] svg, button[title*="sidebar" i] svg { color: #D4AF37 !important; stroke: #D4AF37 !important; fill: transparent !important; width: 22px !important; height: 22px !important;}
 
@@ -406,17 +417,27 @@ button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !importan
 .message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
 .message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important;}
 
-/* Input Flutuante e Outros Inputs */
+/* Input Flutuante */
 .chat-container > div:last-child, .chat-container form { background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; max-width: 900px !important; margin: 0 auto 15px auto !important; }
 .chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; }
 .chat-container textarea:focus { border: none !important; box-shadow: none !important; }
+
 button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
 button.primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
-input { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important;}
 
 ::-webkit-scrollbar {width: 6px; height: 6px;}
 ::-webkit-scrollbar-track {background: transparent;}
 ::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
+
+/* ANIMAÇÃO MIC GLOBAL */
+#bot-mic-global { transition: all 0.3s ease; }
+#bot-mic-global:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(212,175,55,0.8) !important; }
+@keyframes pulse-anim-global { 
+    0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.8); background: #ff4444; color: #fff;} 
+    70% { box-shadow: 0 0 15px 25px rgba(255, 68, 68, 0); background: #cc0000; color: #fff;} 
+    100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); background: #ff4444; color: #fff;} 
+}
+.pulse-anim-global { animation: pulse-anim-global 1.5s infinite !important; }
 
 /* Responsividade Mobile Suave */
 @media screen and (max-width: 768px) {
@@ -427,7 +448,6 @@ input { background: #111 !important; border: 1px solid #333 !important; border-r
 }
 """
 
-# INJEÇÃO JS: O BOTÃO DE VOZ (Agora independente e animado)
 JS_CODE = """
 function() {
     document.body.classList.add('dark');
@@ -439,7 +459,6 @@ function() {
         btn.id = 'bot-mic-global';
         btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
         
-        // Botão flutuante seguro
         btn.style.position = 'fixed';
         btn.style.bottom = '20px'; 
         btn.style.right = '20px';
@@ -447,6 +466,7 @@ function() {
         btn.style.height = '55px';
         btn.style.borderRadius = '50%';
         btn.style.background = 'linear-gradient(145deg, #D4AF37, #AA7C11)';
+        btn.style.color = '#000';
         btn.style.border = 'none';
         btn.style.boxShadow = '0 5px 20px rgba(212,175,55,0.4)';
         btn.style.zIndex = '9999999';
@@ -480,12 +500,12 @@ function() {
             recognition.onresult = (event) => {
                 let text = event.results[0][0].transcript;
                 
-                // Acha a caixa de texto na tela e injeta a voz lá
                 let activeInput = null;
                 const textareas = document.querySelectorAll('textarea');
                 textareas.forEach(ta => {
                     if (ta.offsetParent !== null) activeInput = ta; 
                 });
+                
                 if (!activeInput) {
                     const inputs = document.querySelectorAll('input[type="text"]');
                     inputs.forEach(i => {
@@ -515,7 +535,6 @@ function() {
         }
     }
     
-    // Inicia e mantem o botão vivo na tela
     setTimeout(setupMic, 1000);
     setInterval(setupMic, 3000);
 }
@@ -524,12 +543,12 @@ function() {
 # ==========================================
 # 7. CONSTRUÇÃO DA INTERFACE VISUAL
 # ==========================================
-with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP, head=PWA_HEAD, js=JS_CODE) as interface:
+with gr.Blocks(title="Código de Ouro") as interface:
     id_sessao_atual = gr.State(f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}")
 
     with gr.Sidebar(open=True):
         gr.HTML(f"""
-        <div class="logo-container">
+        <div class="logo-container" style="width: 100%;">
             {TAG_LOGO}
             <h1 class="logo-title">CÓDIGO DE OURO</h1>
         </div>
@@ -546,10 +565,9 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP, head=PWA_H
             with gr.Accordion("⚙️ Ajustes", open=False):
                 with gr.Row():
                     persona = gr.Dropdown(choices=["Assistente Padrão", "Especialista em Marketing", "Analista de Dados"], value="Assistente Padrão", label="Especialidade", scale=2)
-                    net = gr.Checkbox(label="🌐 Web", scale=1)
+                    net = gr.Checkbox(label="🌐 Pesquisa Web", scale=1)
                     btn_exportar = gr.Button("💾 Exportar", variant="secondary", scale=1)
             
-            # Altura ajustada com a propriedade nativa do Gradio
             chat = gr.ChatInterface(
                 fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
                 chatbot=gr.Chatbot(height="70vh", show_label=False), 
@@ -586,7 +604,11 @@ launch_args = {
     "server_name": "0.0.0.0", 
     "server_port": int(os.environ.get("PORT", 10000)),
     "auth": usuarios if usuarios else None, 
-    "auth_message": LOGIN_HACK
+    "auth_message": LOGIN_HACK,
+    "theme": tema_ouro,
+    "css": CSS_APP,
+    "js": JS_CODE, 
+    "head": PWA_HEAD
 }
 
 if caminho_logo: launch_args["favicon_path"] = caminho_logo
