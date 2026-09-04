@@ -233,7 +233,7 @@ PODERES EXECUTIVOS NO CHAT:
 
     # Processamento de Gatilhos
     anexos_html = ""
-    match_img = re.search(r'\[AÇÃO_IMAGEM:\s*(.*?)(?:\Vert{}\s*(\w+))?\]', resposta_acumulada)
+    match_img = re.search(r'\[AÇÃO_IMAGEM:\s*(.*?)(?:\|\s*(\w+))?\]', resposta_acumulada)
     if match_img:
         prompt_i = match_img.group(1).strip()
         prop_i = "Vertical" if (match_img.group(2) and "vertical" in match_img.group(2).lower()) else "Quadrado"
@@ -282,6 +282,9 @@ PODERES EXECUTIVOS NO CHAT:
         with open(arq_sessao, "w", encoding="utf-8") as f: json.dump(historico_atual, f, ensure_ascii=False, indent=4)
     except: pass
 
+# ==========================================
+# 6. FUNÇÕES DE ARQUIVO
+# ==========================================
 def exportar_conversa_docx(historico):
     if not historico: return None
     pasta = f"{DIR_CASOS}/Exportacoes_{datetime.now().strftime('%d_%m_%H%M')}"
@@ -294,4 +297,236 @@ def exportar_conversa_docx(historico):
             autor = "Você:" if item.get("role") == "user" else "Código de Ouro:"
             doc.add_heading(autor, level=2)
             doc.add_paragraph(re.sub(r'<.*?>', '', item.get("content", "")))
-    doc.
+    doc.save(cam_word)
+    return cam_word
+
+def gerar_backup_zip():
+    cam = "./Arquivos_Exportados.zip"
+    with zipfile.ZipFile(cam, 'w', zipfile.ZIP_DEFLATED) as z:
+        for root, _, files in os.walk(DIRETORIO):
+            if "Banco_de_Dados_Vetorial" not in root:
+                for f in files: z.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), DIRETORIO))
+    return cam
+
+def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
+    if not instrucao: return "⚠️ Forneça as instruções de análise.", None, "", ""
+    palavras = 0
+    try:
+        progresso(0.1, desc="Lendo documentos...")
+        pasta = f"{DIR_CASOS}/Analise_{datetime.now().strftime('%d_%m_%Y__%Hh%M')}"
+        os.makedirs(pasta, exist_ok=True)
+        banco = Chroma(persist_directory=DIR_CHROMA, embedding_function=embeddings)
+        fatiador = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
+        
+        if arquivos:
+            for idx, arq in enumerate(arquivos):
+                txt = extrair_texto(arq)
+                palavras += len(txt.split())
+                banco.add_texts([f"[FONTE: {os.path.basename(arq.name)}]\n{c}" for c in fatiador.split_text(txt)])
+            
+        progresso(0.5, desc="Analisando dados...")
+        contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
+        prompt = f"Você é um Analista Especialista. DADOS:\n{contexto}\n\nINSTRUÇÃO: {instrucao}"
+        resposta = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ, max_tokens=4000).choices[0].message.content
+        
+        cam_word = f"{pasta}/Resultado.docx"
+        doc = docx.Document()
+        doc.add_heading('Análise Oficial', 0)
+        doc.add_paragraph(resposta)
+        doc.save(cam_word)
+        return "✅ Análise Concluída!", cam_word, resposta, f"📊 Total lido: {palavras} palavras."
+    except Exception as e: return f"Erro: {e}", None, "", ""
+
+# ==========================================
+# 7. DESIGN SYSTEM: WORKSTATION RESPONSIVA
+# ==========================================
+
+tema_ouro = gr.themes.Soft(
+    font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"],
+).set(
+    body_background_fill="#000000", body_background_fill_dark="#000000",
+    background_fill_primary="#000000", background_fill_primary_dark="#000000",
+    background_fill_secondary="#050505", background_fill_secondary_dark="#050505",
+    block_background_fill="#050505", block_background_fill_dark="#050505",
+    border_color_primary="#1A1A1A", border_color_primary_dark="#1A1A1A",
+    block_border_width="0px"
+)
+
+PWA_HEAD = """
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+"""
+
+LOGIN_HACK = """
+<style>
+    body, main, .wrap { background-color: #000000 !important; color: #fff !important;}
+    form { background: #0A0A0A !important; border: 1px solid rgba(212, 175, 55, 0.4) !important; border-radius: 30px !important; box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important; padding: 40px !important; max-width: 90% !important; margin: auto !important; }
+    button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000000 !important; font-weight: 800 !important; text-transform: uppercase !important; border-radius: 30px !important; border: none !important; font-size: 16px !important; letter-spacing: 1px !important; margin-top: 15px !important; transition: 0.3s !important;}
+    button.primary:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5) !important; }
+    input { background-color: #111111 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #D4AF37 !important; padding: 12px !important; }
+    input:focus { border-color: #D4AF37 !important; outline: none !important; }
+    form h2 { display: none !important; }
+</style>
+<div style="text-align: center; margin-bottom: 30px;">
+    [LOGO_PLACEHOLDER]
+    <h1 style="color: #D4AF37; font-size: clamp(24px, 6vw, 38px); font-weight: 900; margin: 0; letter-spacing: 2px; font-family: 'Inter', sans-serif; text-shadow: 0px 4px 25px rgba(212, 175, 55, 0.4);">CÓDIGO DE OURO</h1>
+    <p style="color: #666; font-size: 12px; margin-top: 5px; font-weight: 700; letter-spacing: 3px;">ACESSO RESTRITO</p>
+</div>
+""".replace("[LOGO_PLACEHOLDER]", TAG_LOGO)
+
+CSS_APP = """
+/* PREVINE VAZAMENTO NO MOBILE E TRAVA X */
+body, html { margin: 0 !important; padding: 0 !important; background-color: #000000 !important; overflow-x: hidden !important; max-width: 100vw !important;}
+footer {display: none !important;}
+
+/* CONTAINER PRINCIPAL E BOTÕES FIXOS */
+.gradio-container { max-width: 100vw !important; border: none !important; overflow-x: hidden !important; box-sizing: border-box !important;}
+.contain { padding: 0 !important; }
+
+/* REVELA E ESTILIZA O BOTÃO DE ABRIR SIDEBAR */
+button[aria-label="Open sidebar"], button[title="Open sidebar"], .sidebar-button {
+    background-color: #0E0E0E !important;
+    border: 1px solid #D4AF37 !important;
+    border-radius: 50% !important;
+    z-index: 99999 !important;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important;
+    left: 15px !important; 
+    top: 15px !important;
+}
+button[aria-label="Open sidebar"] svg, button[title="Open sidebar"] svg {
+    color: #D4AF37 !important;
+    stroke: #D4AF37 !important;
+}
+
+/* SIDEBAR NATIVA */
+.sidebar { background-color: #050505 !important; border-right: 1px solid #111 !important; width: 280px !important; padding: 20px !important; }
+.logo-container { text-align: center; padding: 10px 0 20px 0; border-bottom: 1px solid #111; margin-bottom: 20px;}
+.logo-title { color: #D4AF37; font-size: 22px; font-weight: 900; margin: 0; letter-spacing: 2px; text-shadow: 0 0 15px rgba(212,175,55,0.2);}
+
+/* BOTOES SECUNDARIOS DARK */
+button.secondary, .dropdown { background-color: #111 !important; color: #CCC !important; border: 1px solid #333 !important; border-radius: 15px !important; transition: 0.3s !important;}
+button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !important; }
+
+/* ABAS SUPERIORES */
+.tabs { margin-top: 0 !important; border: none !important; width: 100vw !important;}
+.tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 10px !important;}
+.tab-nav button { background: transparent !important; color: #666 !important; border: none !important; border-radius: 20px !important; padding: 8px 15px !important; font-size: 14px !important;}
+.tab-nav button.selected { color: #D4AF37 !important; background: #0A0A0A !important; border: 1px solid #222 !important; font-weight: bold;}
+
+/* CHAT CENTRAL */
+.chat-container { background: transparent !important; border: none !important; height: 82vh !important; }
+.chatbot { background: transparent !important; border: none !important; max-width: 900px !important; margin: 0 auto !important; width: 100% !important; overflow-x: hidden !important;}
+
+/* BALÕES DE MENSAGEM */
+.message-wrap { padding: 20px 0 !important; }
+.message { border-radius: 20px !important; padding: 15px 20px !important; font-size: 16px !important; line-height: 1.6; max-width: 85% !important; word-wrap: break-word !important;}
+.message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFFFFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
+.message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important;}
+
+/* A PÍLULA FLUTUANTE DE DIGITAR MENSAGEM */
+.chat-container > div:last-child, .chat-container form { 
+    background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; 
+    padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; 
+    max-width: 900px !important; margin: 0 auto 15px auto !important; width: 95% !important; box-sizing: border-box !important;
+}
+.chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; }
+.chat-container textarea:focus { border: none !important; box-shadow: none !important; }
+
+button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
+button.primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
+input { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; max-width: 100% !important;}
+
+::-webkit-scrollbar {width: 6px; height: 6px;}
+::-webkit-scrollbar-track {background: transparent;}
+::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
+
+/* ================= MEDIA QUERIES MOBILE ================= */
+@media screen and (max-width: 768px) {
+    .logo-title { font-size: 18px !important; letter-spacing: 1px !important;}
+    .sidebar { width: 100vw !important; padding: 10px !important; border-right: none !important; }
+    
+    .chat-container { height: 78vh !important; }
+    .message { max-width: 92% !important; font-size: 15px !important; padding: 12px 18px !important; }
+    
+    .chat-container > div:last-child, .chat-container form { 
+        width: 98% !important; 
+        max-width: 98% !important; 
+        margin: 0 auto 10px auto !important; 
+        border-radius: 25px !important;
+    }
+}
+"""
+
+# ==========================================
+# 8. CONSTRUÇÃO DA INTERFACE VISUAL
+# ==========================================
+with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interface:
+    
+    id_sessao_atual = gr.State(f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}")
+
+    with gr.Sidebar(open=True):
+        gr.HTML(f"""
+        <div class="logo-container">
+            {TAG_LOGO}
+            <h1 class="logo-title">CÓDIGO DE OURO</h1>
+        </div>
+        """)
+        btn_novo = gr.Button("➕ Novo Chat", variant="primary")
+        gr.Markdown("### 📜 Histórico de Conversas")
+        lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), label="", interactive=True)
+        btn_load = gr.Button("Abrir Conversa", variant="secondary")
+        btn_atualizar = gr.Button("🔄 Atualizar Histórico", variant="secondary")
+        btn_atualizar.click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
+
+    with gr.Tabs():
+        
+        with gr.TabItem("💬 Chat IA"):
+            with gr.Accordion("⚙️ Ajustes", open=False):
+                with gr.Row():
+                    persona = gr.Dropdown(choices=["Assistente Padrão", "Especialista em Marketing", "Analista de Dados"], value="Assistente Padrão", label="Especialidade", scale=2)
+                    net = gr.Checkbox(label="🌐 Web", scale=1)
+                    btn_exportar = gr.Button("💾 Exportar (Word)", variant="secondary", scale=1)
+            
+            chat = gr.ChatInterface(
+                fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
+                chatbot=gr.Chatbot(height=700, show_label=False),
+                textbox=gr.MultimodalTextbox(placeholder="Envie uma mensagem, foto ou documento...", container=False)
+            )
+            arq_exportado = gr.File(label="Arquivo", visible=False)
+            btn_exportar.click(exportar_conversa_docx, chat.chatbot, arq_exportado).then(lambda: gr.update(visible=True), None, arq_exportado)
+            
+            btn_load.click(carregar_sessao_chat, lista_chats, [chat.chatbot, id_sessao_atual])
+            btn_novo.click(iniciar_novo_chat, None, [chat.chatbot, id_sessao_atual, lista_chats])
+
+        with gr.TabItem("📑 Documentos"):
+            with gr.Row():
+                files = gr.File(label="Upload (PDF/Excel)", file_count="multiple")
+                inst = gr.Textbox(label="Instrução", placeholder="O que devo analisar?")
+            btn_doc = gr.Button("Iniciar Análise Profissional", variant="primary")
+            res_doc = gr.Textbox(label="Resultado", lines=10)
+
+        with gr.TabItem("🗂️ Cofre"):
+            btn_att_gal = gr.Button("🔄 Sincronizar Galeria Visual", variant="primary")
+            gal = gr.Gallery(columns=4, height="auto")
+            btn_att_gal.click(atualizar_galeria_imagens, None, gal)
+
+# ==========================================
+# 9. LANÇAMENTO 
+# ==========================================
+usuarios = []
+for i in ["", "_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9"]:
+    u = os.environ.get(f"LOGIN_USUARIO{i}") or os.environ.get(f"USUARIO{i}")
+    s = os.environ.get(f"LOGIN_SENHA{i}") or os.environ.get(f"SENHA{i}")
+    if u and s:
+        usuarios.append((u, s))
+
+interface.launch(
+    server_name="0.0.0.0", 
+    server_port=int(os.environ.get("PORT", 10000)),
+    auth=usuarios if usuarios else None,
+    auth_message=LOGIN_HACK, 
+    js="() => { document.body.classList.add('dark'); }",
+    head=PWA_HEAD
+)
