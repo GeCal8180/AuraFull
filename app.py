@@ -33,12 +33,12 @@ MODELO_VISAO = "llama-3.2-90b-vision-preview"
 embeddings = HuggingFaceInferenceAPIEmbeddings(api_key=chave_hf, model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 # ==========================================
-# 2. DIRETÓRIOS E BANCO DE DADOS
+# 2. DIRETÓRIOS DO SISTEMA
 # ==========================================
-DIRETORIO = "./AuraFull_Master"
-DIR_CHROMA = f"{DIRETORIO}/Banco_de_Dados"
+DIRETORIO = "./AuraFull_Core"
+DIR_CHROMA = f"{DIRETORIO}/Banco_Vetorial"
 DIR_CASOS = f"{DIRETORIO}/Arquivos_Salvos"
-DIR_MIDIA = f"{DIRETORIO}/Midias"
+DIR_MIDIA = f"{DIRETORIO}/Midias_Geradas"
 DIR_CHATS = f"{DIRETORIO}/Historico"
 
 for d in [DIRETORIO, DIR_CASOS, DIR_MIDIA, DIR_CHATS]:
@@ -50,10 +50,10 @@ for d in [DIRETORIO, DIR_CASOS, DIR_MIDIA, DIR_CHATS]:
 def listar_sessoes_chat():
     sessoes = [f.replace('.json', '') for f in os.listdir(DIR_CHATS) if f.endswith('.json')]
     sessoes.sort(reverse=True)
-    return sessoes if sessoes else ["Nenhum histórico"]
+    return sessoes if sessoes else ["Nenhuma conversa salva"]
 
 def carregar_sessao_chat(id_sessao):
-    if not id_sessao or id_sessao == "Nenhum histórico": return [], id_sessao
+    if not id_sessao or id_sessao == "Nenhuma conversa salva": return [], id_sessao
     try:
         with open(f"{DIR_CHATS}/{id_sessao}.json", "r", encoding="utf-8") as f: return json.load(f), id_sessao
     except: return [], id_sessao
@@ -73,7 +73,7 @@ def atualizar_galeria_imagens():
     return imgs
 
 # ==========================================
-# 4. EXTRAÇÃO E MOTORES
+# 4. EXTRAÇÃO E MOTORES MULTIMÍDIA
 # ==========================================
 def encode_file_b64(caminho):
     with open(caminho, "rb") as f: return base64.b64encode(f.read()).decode('utf-8')
@@ -137,7 +137,7 @@ def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessa
     contexto_extra = ""
     imagens_anexadas = []
     
-    if arquivos: yield "⏳ Lendo anexos..."
+    if arquivos: yield "⏳ Lendo arquivos..."
     
     for arq in arquivos:
         ext = arq.lower()
@@ -147,20 +147,20 @@ def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessa
             contexto_extra += f"\n[DOCUMENTO]:\n{extrair_texto(arq)}\n"
             
     if usar_internet and texto_usuario:
-        yield "🌐 Pesquisando na internet..."
+        yield "🌐 Pesquisando na web..."
         try:
             resultados = DDGS().text(texto_usuario, max_results=4)
-            contexto_extra += "\n\n[WEB]:\n" + "\n".join([f"{r['title']} - {r['body']}" for r in resultados])
+            contexto_extra += "\n\n[DADOS WEB]:\n" + "\n".join([f"{r['title']} - {r['body']}" for r in resultados])
         except: pass
 
-    yield "✨ Pensando..."
+    yield "✨ Processando..."
 
-    sys_prompt = f"""Você é a IA AuraFull operando no perfil {persona}.
-Aja com a mesma inteligência, clareza e estrutura limpa do Google Gemini.
-Formate bem suas respostas em Markdown.
-PODERES DE GERAÇÃO (Se o usuário pedir imagens, vídeos ou áudios, escreva a tag):
+    sys_prompt = f"""Você é a IA "AuraFull", operando com o perfil {persona}.
+Comporte-se como um assistente de altíssimo nível, claro, preciso e direto, similar ao Google Gemini.
+Formate suas respostas em Markdown limpo.
+PODERES DE GERAÇÃO MULTIMÍDIA (Acione usando os comandos exatos se o usuário pedir):
 1. IMAGEM: [AÇÃO_IMAGEM: prompt detalhado em inglês | vertical]
-2. EDIÇÃO: [AÇÃO_EDITAR_IMAGEM: instrução em inglês]
+2. EDIÇÃO: [AÇÃO_EDITAR_IMAGEM: comando em inglês]
 3. VÍDEO: [AÇÃO_VIDEO: cena em inglês]
 4. ÁUDIO: [AÇÃO_AUDIO: texto falado em pt-BR]"""
 
@@ -177,7 +177,7 @@ PODERES DE GERAÇÃO (Se o usuário pedir imagens, vídeos ou áudios, escreva a
     texto_final = (texto_usuario + contexto_extra).strip()
 
     if imagens_anexadas:
-        conteudo_multimodal = [{"type": "text", "text": texto_final if texto_final else "O que você vê na imagem?"}]
+        conteudo_multimodal = [{"type": "text", "text": texto_final if texto_final else "O que há nesta imagem?"}]
         for img in imagens_anexadas:
             conteudo_multimodal.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encode_file_b64(img)}"}})
         mensagens.append({"role": "user", "content": conteudo_multimodal})
@@ -193,7 +193,7 @@ PODERES DE GERAÇÃO (Se o usuário pedir imagens, vídeos ou áudios, escreva a
         delta = pedaco.choices[0].delta.content
         if delta:
             resposta_acumulada += delta
-            yield re.sub(r'\[AÇÃO_\w+:.*?\]', '✨ Gerando mídia...', resposta_acumulada)
+            yield re.sub(r'\[AÇÃO_\w+:.*?\]', '✨ Criando mídia...', resposta_acumulada)
 
     anexos_html = ""
     match_img = re.search(r'\[AÇÃO_IMAGEM:\s*(.*?)(?:\|\s*(\w+))?\]', resposta_acumulada)
@@ -234,7 +234,7 @@ PODERES DE GERAÇÃO (Se o usuário pedir imagens, vídeos ou áudios, escreva a
     yield resposta_final_limpa
 
     try:
-        sessao_alvo = id_sessao if (id_sessao and id_sessao != "Nenhum histórico") else f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}"
+        sessao_alvo = id_sessao if (id_sessao and id_sessao != "Nenhuma conversa salva") else f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}"
         arq_sessao = f"{DIR_CHATS}/{sessao_alvo}.json"
         historico_atual = []
         if os.path.exists(arq_sessao):
@@ -273,7 +273,7 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
                 txt = extrair_texto(arq)
                 banco.add_texts([f"FONTE:\n{c}" for c in fatiador.split_text(txt)])
             
-        progresso(0.5, desc="AuraFull processando dados...")
+        progresso(0.5, desc="AuraFull processando...")
         contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
         prompt = f"DADOS:\n{contexto}\n\nINSTRUÇÃO: {instrucao}"
         resposta = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ, max_tokens=4000).choices[0].message.content
@@ -286,30 +286,35 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
     except Exception as e: return f"Erro: {e}", None
 
 # ==========================================
-# 6. TEMA "AURAFULL" (Idêntico ao Gemini Dark)
+# 6. ARQUITETURA DE DESIGN GEMINI CLONE (AURAFULL)
 # ==========================================
-tema_aura = gr.themes.Default(
+# Cores rigorosamente exatas ao Dark Mode do Google Gemini
+tema_aura = gr.themes.Base(
     font=[gr.themes.GoogleFont("Inter"), "sans-serif"]
 ).set(
     body_background_fill="#131314",
     body_background_fill_dark="#131314",
+    background_fill_primary="#131314",
+    background_fill_primary_dark="#131314",
+    background_fill_secondary="#1e1f20",
+    background_fill_secondary_dark="#1e1f20",
     block_background_fill="#131314",
     block_background_fill_dark="#131314",
-    border_color_primary="#131314",
-    border_color_primary_dark="#131314",
+    border_color_primary="transparent",
+    border_color_primary_dark="transparent",
     body_text_color="#e3e3e3",
     body_text_color_dark="#e3e3e3",
-    block_title_text_color="#e3e3e3",
-    button_primary_background_fill="#8ab4f8",
-    button_primary_background_fill_dark="#8ab4f8",
-    button_primary_text_color="#131314",
-    button_primary_text_color_dark="#131314",
-    button_secondary_background_fill="#1e1f20",
-    button_secondary_background_fill_dark="#1e1f20",
-    button_secondary_text_color="#e3e3e3",
-    checkbox_background_color_selected="#8ab4f8",
-    checkbox_background_color_selected_dark="#8ab4f8",
-    block_radius="16px"
+    body_text_color_subdued="#c4c7c5",
+    body_text_color_subdued_dark="#c4c7c5",
+    button_primary_background_fill="#1e1f20",
+    button_primary_background_fill_dark="#1e1f20",
+    button_primary_text_color="#e3e3e3",
+    button_primary_text_color_dark="#e3e3e3",
+    button_secondary_background_fill="#131314",
+    button_secondary_background_fill_dark="#131314",
+    button_secondary_text_color="#c4c7c5",
+    button_secondary_text_color_dark="#c4c7c5",
+    block_radius="24px"
 )
 
 PWA_HEAD = """
@@ -323,55 +328,69 @@ LOGIN_HACK = """
 <style>
     body, main { background-color: #131314 !important; color: #e3e3e3 !important; font-family: 'Inter', sans-serif;}
     form { background: #1e1f20 !important; border-radius: 24px !important; padding: 40px !important; max-width: 90% !important; margin: auto !important; width: 400px;}
-    button.primary { background: #8ab4f8 !important; color: #131314 !important; font-weight: bold !important; border-radius: 24px !important; border: none !important; font-size: 16px !important; margin-top: 15px !important; padding: 12px !important;}
+    button.primary { background: #a8c7fa !important; color: #131314 !important; font-weight: 500 !important; border-radius: 24px !important; border: none !important; font-size: 15px !important; margin-top: 15px !important; padding: 10px !important;}
     input { background-color: #131314 !important; border: none !important; border-radius: 12px !important; color: #e3e3e3 !important; padding: 12px !important; width: 100%;}
     form h2 { display: none !important; }
 </style>
 <div style="text-align: center; margin-bottom: 30px;">
-    <h1 style="color: #e3e3e3; font-size: 32px; font-weight: 500; margin: 0; letter-spacing: -0.5px;">AuraFull</h1>
-    <p style="color: #888; font-size: 14px; margin-top: 5px;">Acesso Restrito</p>
+    <h1 style="color: #e3e3e3; font-size: 28px; font-weight: 500; margin: 0;">AuraFull</h1>
+    <p style="color: #c4c7c5; font-size: 14px; margin-top: 5px;">Faça login para continuar</p>
 </div>
 """
 
 CSS_AURA = """
+/* Reset total para remover o Gradio */
 footer { display: none !important; }
+.gradio-container { background-color: #131314 !important; border: none !important; }
 
-/* Menus Superiores Estilo Abas Limpas */
+/* Sidebar Esquerda (Menus) */
+.sidebar { background-color: #131314 !important; border-right: none !important; padding: 15px !important; }
+
+/* Botões da Sidebar estilo Gemini */
+button.primary, button.secondary { border: none !important; border-radius: 50px !important; padding: 10px 18px !important; text-align: left !important; justify-content: flex-start !important; font-size: 14px !important; transition: 0.2s !important; box-shadow: none !important;}
+button.primary:hover, button.secondary:hover { background-color: #1e1f20 !important; color: #e3e3e3 !important; }
+
+/* Abas (Tabs) Invisíveis para simular navegação fluída */
 .tabs { border: none !important; background: transparent !important; }
-.tab-nav { background: transparent !important; border-bottom: 1px solid #333 !important; gap: 20px !important; padding: 0 10px !important; }
-.tab-nav button { background: transparent !important; color: #888 !important; border: none !important; font-size: 15px !important; padding: 10px 0 !important;}
-.tab-nav button.selected { color: #8ab4f8 !important; border-bottom: 2px solid #8ab4f8 !important; border-radius: 0 !important; }
+.tab-nav { background: transparent !important; border: none !important; margin-bottom: 10px !important; gap: 15px !important; justify-content: center !important;}
+.tab-nav button { background: transparent !important; border: none !important; color: #c4c7c5 !important; font-size: 14px !important; font-weight: 500 !important; padding: 8px 16px !important; border-radius: 8px !important;}
+.tab-nav button.selected { color: #a8c7fa !important; background-color: rgba(168, 199, 250, 0.08) !important; }
+.tab-nav button:hover { background-color: rgba(255, 255, 255, 0.04) !important; }
 
-/* Sidebar Limpa Gemini */
-.sidebar { background-color: #1e1f20 !important; border-right: none !important; padding: 20px !important; border-radius: 0 24px 24px 0 !important; }
+/* Balões do Chat (Idêntico ao Gemini) */
+.chatbot { background: transparent !important; border: none !important; }
+.message-wrap { padding: 5px 0 !important; }
+.message { font-size: 15px !important; padding: 12px 18px !important; line-height: 1.5 !important; box-shadow: none !important; border: none !important; }
+.message.user { background-color: #1e1f20 !important; color: #e3e3e3 !important; border-radius: 24px !important; margin-left: auto !important; max-width: 75% !important; border-bottom-right-radius: 4px !important; }
+.message.bot { background-color: transparent !important; color: #e3e3e3 !important; margin-right: auto !important; padding-left: 0 !important; max-width: 90% !important; }
 
-/* Chat Bubbles (Gemini Clone) */
-.message { font-size: 15px !important; padding: 12px 18px !important; line-height: 1.6; }
-.message.user { background-color: #1e1f20 !important; border: none !important; border-radius: 24px !important; color: #e3e3e3 !important; margin-left: auto !important; max-width: 80% !important;}
-.message.bot { background-color: transparent !important; border: none !important; padding: 12px 0 !important; color: #e3e3e3 !important;}
+/* Input Pílula do Gemini */
+.chat-container > div:last-child, .chat-container form { background-color: #1e1f20 !important; border: none !important; border-radius: 32px !important; padding: 4px 16px !important; margin: 0 auto 10px auto !important; max-width: 820px !important; box-shadow: none !important; }
+.chat-container textarea { background: transparent !important; border: none !important; color: #e3e3e3 !important; font-size: 15px !important; resize: none !important; padding: 14px 50px 14px 5px !important; box-shadow: none !important;}
+.chat-container textarea:focus { outline: none !important; box-shadow: none !important; border: none !important; }
+.chat-container textarea::placeholder { color: #c4c7c5 !important; font-weight: 400 !important; }
 
-/* Caixa de Digitação Input Pílula */
-.chat-container > div:last-child, .chat-container form { background-color: #1e1f20 !important; border: none !important; border-radius: 30px !important; box-shadow: none !important; padding: 4px 10px !important; margin-bottom: 20px !important; max-width: 850px !important; margin: 0 auto !important;}
-.chat-container textarea { background-color: transparent !important; border: none !important; color: #e3e3e3 !important; padding: 12px !important; }
-.chat-container textarea:focus { outline: none !important; border: none !important; box-shadow: none !important; }
-.chat-container textarea::placeholder { color: #888 !important; }
+/* Oculta Labels padrão do Gradio */
+.gr-box > label { display: none !important; }
 
-/* Ajustes de Dropdown e Checkbox */
-.gradio-dropdown input, .gradio-dropdown select, .dropdown-menu, .options, input[type="text"], input[type="file"] { background-color: #1e1f20 !important; color: #e3e3e3 !important; border: none !important; border-radius: 12px !important; }
-input[type="checkbox"] { accent-color: #8ab4f8 !important; }
+/* Dropdowns e Checkboxes */
+.gradio-dropdown { background: transparent !important; border: none !important; }
+.gradio-dropdown input { background-color: #1e1f20 !important; color: #e3e3e3 !important; border: none !important; border-radius: 12px !important; }
+.dropdown-menu, .options { background-color: #1e1f20 !important; border: 1px solid #333 !important; border-radius: 12px !important; }
+input[type="checkbox"] { accent-color: #a8c7fa !important; }
 
-/* Microfone Estilo Gemini Integrado na Caixa */
-#mic-aura-btn {
-    background: transparent; border: none; color: #e3e3e3; width: 40px; height: 40px; border-radius: 50%;
-    cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;
-    position: absolute; right: 50px; bottom: 12px; z-index: 999;
-}
-#mic-aura-btn:hover { background: #333538; }
-.mic-aura-active { color: #8ab4f8 !important; animation: mic-pulse 1.5s infinite; }
-@keyframes mic-pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
+/* Microfone Injetado no Input */
+#mic-aura-btn { position: absolute; right: 55px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #c4c7c5; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; z-index: 999; display: flex; align-items: center; justify-content: center; }
+#mic-aura-btn:hover { background: rgba(255, 255, 255, 0.08); color: #e3e3e3; }
+.mic-aura-active { color: #ff5555 !important; animation: pulse-aura 1.5s infinite; }
+@keyframes pulse-aura { 0% { transform: translateY(-50%) scale(1); opacity: 1; } 50% { transform: translateY(-50%) scale(1.1); opacity: 0.7; } 100% { transform: translateY(-50%) scale(1); opacity: 1; } }
+
+/* Texto Aviso (Disclaimer) */
+.disclaimer { text-align: center; color: #c4c7c5; font-size: 11px; margin-top: 5px; margin-bottom: 10px; }
 
 @media screen and (max-width: 768px) {
-    #mic-aura-btn { right: 45px; bottom: 8px; }
+    .chat-container > div:last-child, .chat-container form { width: 95% !important; max-width: 95% !important; border-radius: 28px !important; }
+    .message.user { max-width: 85% !important; }
 }
 """
 
@@ -422,12 +441,12 @@ function() {
                 recognition.onend = () => { 
                     isRecording = false; 
                     btn.classList.remove('mic-aura-active'); 
-                    textarea.placeholder = "Pergunte ao AuraFull...";
+                    textarea.placeholder = "Pergunte à AuraFull";
                 };
                 recognition.onerror = () => { 
                     isRecording = false; 
                     btn.classList.remove('mic-aura-active'); 
-                    textarea.placeholder = "Pergunte ao AuraFull...";
+                    textarea.placeholder = "Pergunte à AuraFull";
                 };
             } else {
                 btn.style.display = 'none';
@@ -440,56 +459,65 @@ function() {
 """
 
 # ==========================================
-# 7. INTERFACE AURAFULL (Minimalista)
+# 7. INTERFACE AURAFULL (Clone Nível OpenAI/Google)
 # ==========================================
 with gr.Blocks(title="AuraFull", theme=tema_aura, css=CSS_AURA, head=PWA_HEAD, js=JS_AURA, fill_height=True) as interface:
     id_sessao_atual = gr.State(f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}")
 
-    with gr.Sidebar():
-        gr.HTML("""
-        <div style="margin-bottom: 30px;">
-            <h1 style="color: #e3e3e3; font-size: 24px; font-weight: 500; letter-spacing: -0.5px;">AuraFull</h1>
-        </div>
-        """)
-        btn_novo = gr.Button("➕ Novo chat", variant="secondary")
-        
-        gr.HTML("<br><p style='color:#888; font-size:12px; font-weight:bold;'>SESSÕES RECENTES</p>")
-        lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), show_label=False, interactive=True)
-        with gr.Row():
-            btn_load = gr.Button("Abrir", variant="secondary")
-            btn_atualizar = gr.Button("Atualizar", variant="secondary")
-        btn_atualizar.click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
-
-        gr.HTML("<br><p style='color:#888; font-size:12px; font-weight:bold;'>OPÇÕES DA IA</p>")
-        persona = gr.Dropdown(choices=["Assistente Padrão", "Gênio Criativo", "Analista de Dados"], value="Assistente Padrão", show_label=False)
-        net = gr.Checkbox(label="Pesquisa na Web", value=False)
-        btn_exportar = gr.Button("Exportar Conversa", variant="secondary")
-
-    with gr.Tabs():
-        with gr.TabItem("Chat"):
-            chat = gr.ChatInterface(
-                fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
-                chatbot=gr.Chatbot(show_label=False), 
-                textbox=gr.MultimodalTextbox(placeholder="Pergunte ao AuraFull...", container=False)
-            )
-            arq_exportado = gr.File(visible=False)
-            btn_exportar.click(exportar_conversa_docx, chat.chatbot, arq_exportado).then(lambda: gr.update(visible=True), None, arq_exportado)
-            btn_load.click(carregar_sessao_chat, lista_chats, [chat.chatbot, id_sessao_atual])
-            btn_novo.click(iniciar_novo_chat, None, [chat.chatbot, id_sessao_atual, lista_chats])
-
-        with gr.TabItem("Análise de Documentos"):
+    with gr.Row():
+        # A BARRA LATERAL (IDÊNTICA AO GEMINI)
+        with gr.Column(scale=2, min_width=260, elem_classes="sidebar"):
+            gr.HTML("""
+            <div style="margin-bottom: 25px; padding-left: 5px;">
+                <h1 style="color: #e3e3e3; font-size: 20px; font-weight: 500; letter-spacing: -0.5px; margin: 0;">✨ AuraFull</h1>
+            </div>
+            """)
+            
+            btn_novo = gr.Button("➕ Novo chat", variant="secondary")
+            
+            gr.HTML("<br><div style='color: #c4c7c5; font-size: 12px; margin-left: 10px; margin-bottom: 8px;'>Recentes</div>")
+            lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), interactive=True)
             with gr.Row():
-                files = gr.File(label="Solte PDFs, Excel ou Word aqui", file_count="multiple")
-                with gr.Column():
-                    inst = gr.Textbox(show_label=False, placeholder="O que deseja descobrir nos documentos?", lines=4)
-                    btn_doc = gr.Button("Analisar", variant="primary")
-            res_doc = gr.Textbox(show_label=False, placeholder="O relatório aparecerá aqui...", lines=10)
-            btn_doc.click(gerar_dossie_lote, [files, inst], [res_doc])
+                btn_load = gr.Button("Abrir", variant="secondary")
+                btn_atualizar = gr.Button("Atualizar", variant="secondary")
+            btn_atualizar.click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
 
-        with gr.TabItem("Galeria"):
-            btn_att_gal = gr.Button("Atualizar Mídias", variant="secondary")
-            gal = gr.Gallery(columns=4, height="auto", show_label=False)
-            btn_att_gal.click(atualizar_galeria_imagens, None, gal)
+            gr.HTML("<br><div style='color: #c4c7c5; font-size: 12px; margin-left: 10px; margin-bottom: 8px;'>Ferramentas</div>")
+            persona = gr.Dropdown(choices=["Assistente Padrão", "Criador de Conteúdo", "Analista de Dados"], value="Assistente Padrão")
+            net = gr.Checkbox(label="Pesquisa na Web Ativa", value=False)
+            btn_exportar = gr.Button("Baixar PDF/Docs", variant="secondary")
+
+        # A ÁREA DE CHAT PRINCIPAL
+        with gr.Column(scale=8):
+            with gr.Tabs():
+                with gr.TabItem("Chat"):
+                    chat = gr.ChatInterface(
+                        fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
+                        chatbot=gr.Chatbot(show_label=False), 
+                        textbox=gr.MultimodalTextbox(placeholder="Pergunte à AuraFull", container=False)
+                    )
+                    gr.HTML("<div class='disclaimer'>AuraFull pode cometer erros. Considere verificar as informações importantes.</div>")
+                    
+                    arq_exportado = gr.File(visible=False)
+                    btn_exportar.click(exportar_conversa_docx, chat.chatbot, arq_exportado).then(lambda: gr.update(visible=True), None, arq_exportado)
+                    btn_load.click(carregar_sessao_chat, lista_chats, [chat.chatbot, id_sessao_atual])
+                    btn_novo.click(iniciar_novo_chat, None, [chat.chatbot, id_sessao_atual, lista_chats])
+
+                with gr.TabItem("Análise de Documentos"):
+                    gr.HTML("<br><h2 style='text-align: center; color: #e3e3e3; font-weight: 400;'>Análise de Dados e Documentos</h2><br>")
+                    with gr.Row():
+                        files = gr.File(label="Upload (PDF, Word, Excel)", file_count="multiple")
+                        with gr.Column():
+                            inst = gr.Textbox(placeholder="O que você precisa descobrir nestes documentos?", lines=4)
+                            btn_doc = gr.Button("Analisar", variant="secondary")
+                    res_doc = gr.Textbox(placeholder="O relatório gerado aparecerá aqui...", lines=12)
+                    btn_doc.click(gerar_dossie_lote, [files, inst], [res_doc])
+
+                with gr.TabItem("Galeria"):
+                    gr.HTML("<br><h2 style='text-align: center; color: #e3e3e3; font-weight: 400;'>Biblioteca de Mídias Geradas</h2><br>")
+                    btn_att_gal = gr.Button("Atualizar Biblioteca", variant="secondary")
+                    gal = gr.Gallery(columns=4, height="auto")
+                    btn_att_gal.click(atualizar_galeria_imagens, None, gal)
 
 # ==========================================
 # 8. LANÇAMENTO 
