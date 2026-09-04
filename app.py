@@ -338,16 +338,21 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
     except Exception as e: return f"Erro: {e}", None, "", ""
 
 # ==========================================
-# 6. CONFIGURAÇÕES VISUAIS E HACKS CSS
+# 6. CONFIGURAÇÕES VISUAIS E HACKS CSS (CONTRASTE ALTO)
 # ==========================================
 
+# A injeção de Contraste Branco Puro nas Letras
 tema_ouro = gr.themes.Soft(font=[gr.themes.GoogleFont("Inter"), "sans-serif"]).set(
     body_background_fill="#000000", body_background_fill_dark="#000000",
     background_fill_primary="#000000", background_fill_primary_dark="#000000",
     background_fill_secondary="#050505", background_fill_secondary_dark="#050505",
     block_background_fill="#050505", block_background_fill_dark="#050505",
     border_color_primary="#1A1A1A", border_color_primary_dark="#1A1A1A",
-    block_border_width="0px"
+    block_border_width="0px",
+    body_text_color="#FFFFFF", body_text_color_dark="#FFFFFF",
+    body_text_color_subdued="#E0E0E0", body_text_color_subdued_dark="#E0E0E0",
+    block_title_text_color="#D4AF37", block_title_text_color_dark="#D4AF37",
+    block_label_text_color="#D4AF37", block_label_text_color_dark="#D4AF37"
 )
 
 PWA_HEAD = f"""
@@ -372,28 +377,21 @@ LOGIN_HACK = """
 <div style="text-align: center; margin-bottom: 30px; width: 100%;">
     [LOGO_PLACEHOLDER]
     <h1 style="color: #D4AF37; font-size: clamp(24px, 6vw, 38px); font-weight: 900; margin: 0; letter-spacing: 2px;">CÓDIGO DE OURO</h1>
-    <p style="color: #666; font-size: 12px; margin-top: 5px; font-weight: 700; letter-spacing: 3px;">ACESSO RESTRITO</p>
+    <p style="color: #AAAAAA; font-size: 12px; margin-top: 5px; font-weight: 700; letter-spacing: 3px;">ACESSO RESTRITO</p>
 </div>
 """.replace("[LOGO_PLACEHOLDER]", TAG_LOGO)
 
 CSS_APP = """
-body, html { background-color: #000000 !important; color: #fff !important; }
+body, html { background-color: #000000 !important; color: #FFFFFF !important; }
 footer { display: none !important; }
 
-/* FIX DO CHECKBOX DOURADO (Botão WEB) */
-input[type="checkbox"] {
-    appearance: auto !important;
-    -webkit-appearance: auto !important;
-    accent-color: #D4AF37 !important;
-    width: 18px !important;
-    height: 18px !important;
-    cursor: pointer !important;
-    margin-right: 5px !important;
-    transform: scale(1.2) !important;
-}
+/* FIX DO CHECKBOX DOURADO */
+input[type="checkbox"] { appearance: auto !important; -webkit-appearance: auto !important; accent-color: #D4AF37 !important; width: 18px !important; height: 18px !important; cursor: pointer !important; margin-right: 5px !important; transform: scale(1.2) !important; }
 
-/* Correção Dropdown Escuro e Inputs */
-.gradio-dropdown input, .gradio-dropdown select, .gradio-dropdown .wrap, .dropdown-menu, .options { background-color: #111 !important; color: #fff !important; border-color: #333 !important; }
+/* FIX CONTRASTE GERAL E TEXTOS */
+p, span, div, .markdown, .gradio-container { color: #FFFFFF !important; }
+::placeholder { color: #999999 !important; opacity: 1 !important; }
+.gradio-dropdown input, .gradio-dropdown select, .gradio-dropdown .wrap, .dropdown-menu, .options { background-color: #111 !important; color: #FFF !important; border-color: #333 !important; }
 
 /* Botão da Sidebar Fixo */
 .sidebar-button, button[aria-label*="sidebar" i], button[title*="sidebar" i] { position: fixed !important; top: 15px !important; left: 15px !important; background-color: #0E0E0E !important; border: 1px solid #D4AF37 !important; border-radius: 50% !important; z-index: 999999 !important; box-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important; width: 45px !important; height: 45px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;}
@@ -402,24 +400,24 @@ input[type="checkbox"] {
 /* Sidebar Design */
 .sidebar { background-color: #050505 !important; border-right: 1px solid #111 !important; padding: 20px !important;}
 .logo-container { text-align: center; padding: 10px 0 20px 0; border-bottom: 1px solid #111; margin-bottom: 20px; width: 100%;}
-.logo-title { color: #D4AF37; font-size: 22px; font-weight: 900; margin: 0; letter-spacing: 2px;}
+.logo-title { color: #D4AF37 !important; font-size: 22px; font-weight: 900; margin: 0; letter-spacing: 2px;}
 
-/* Estilos de Botão e Abas */
-button.secondary { background-color: #111 !important; color: #CCC !important; border: 1px solid #333 !important; border-radius: 15px !important; transition: 0.3s !important;}
+/* Estilos de Botão e Abas (Prata Claro) */
+button.secondary { background-color: #111 !important; color: #E0E0E0 !important; border: 1px solid #333 !important; border-radius: 15px !important; transition: 0.3s !important;}
 button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !important; }
 .tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 10px !important; flex-wrap: wrap;}
-.tab-nav button { background: transparent !important; color: #666 !important; border: none !important; border-radius: 20px !important; padding: 8px 15px !important; font-size: 14px !important;}
-.tab-nav button.selected { color: #D4AF37 !important; background: #0A0A0A !important; border: 1px solid #222 !important; font-weight: bold;}
+.tab-nav button { background: transparent !important; color: #BBBBBB !important; border: none !important; border-radius: 20px !important; padding: 8px 15px !important; font-size: 14px !important;}
+.tab-nav button.selected { color: #000 !important; background: #D4AF37 !important; border: 1px solid #D4AF37 !important; font-weight: bold;}
 
 /* Chat e Balões */
 .message-wrap { padding: 20px 0 !important; }
 .message { border-radius: 20px !important; padding: 15px 20px !important; font-size: 16px !important; line-height: 1.6; max-width: 85% !important; word-wrap: break-word !important; }
-.message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
-.message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important;}
+.message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFFFFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
+.message.bot { background: transparent !important; border: none !important; color: #FFFFFF !important; margin-right: auto !important; padding-left: 0 !important;}
 
 /* Input Flutuante */
 .chat-container > div:last-child, .chat-container form { background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; max-width: 900px !important; margin: 0 auto 15px auto !important; }
-.chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; }
+.chat-container textarea { background: transparent !important; border: none !important; color: #FFFFFF !important; box-shadow: none !important; }
 .chat-container textarea:focus { border: none !important; box-shadow: none !important; }
 
 button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
