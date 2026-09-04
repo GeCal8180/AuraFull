@@ -245,9 +245,6 @@ Use blocos de código ```mermaid para gerar gráficos visuais de dados numérico
             texto_visivel = re.sub(r'\[AÇÃO_\w+:.*?\]', '⚙️ *(Gerando mídia solicitada...)*', resposta_acumulada)
             yield texto_visivel
 
-    # ==========================================
-    # PROCESSAMENTO DE MÍDIA
-    # ==========================================
     anexos_html = ""
     
     match_img = re.search(r'\[AÇÃO_IMAGEM:\s*(.*?)(?:\|\s*(\w+))?\]', resposta_acumulada)
@@ -358,7 +355,7 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
         return f"Erro durante a análise: {e}", None, "", ""
 
 # ==========================================
-# 6. DESIGN SYSTEM: CÓDIGO DE OURO (DOLA STYLE)
+# 6. DESIGN SYSTEM: CÓDIGO DE OURO (V13.2)
 # ==========================================
 PWA_HEAD = """
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -376,13 +373,11 @@ tema_base = gr.themes.Soft(
     border_color_primary="transparent", block_border_width="0px"
 )
 
-# O CSS a seguir garante que a estrutura seja EXATAMENTE igual a do Dola (Centralizada, Pílulas) 
-# mas com as cores Premium Milimétricas (Preto Caviar e Dourado)
 css_ouro = """
 footer {display: none !important;}
 body, .gradio-container { background-color: #050505 !important; color: #FFFFFF !important; }
 
-/* ESTRUTURA DOLA AI (Centralizada e Fina) */
+/* ESTRUTURA CENTRALIZADA (App Style) */
 .gradio-container {max-width: 980px !important; margin: auto !important; border: none !important;}
 
 /* CABEÇALHO CÓDIGO DE OURO */
@@ -390,30 +385,39 @@ body, .gradio-container { background-color: #050505 !important; color: #FFFFFF !
 .logo-title { color: #D4AF37; font-size: 34px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 4px; font-family: 'Inter', sans-serif; text-shadow: 0px 4px 20px rgba(212, 175, 55, 0.3);}
 .logo-subtitle { color: #888888; font-size: 13px; margin-top: 5px; font-weight: 500; letter-spacing: 2px;}
 
-/* ABAS ESTILO PÍLULA FLUTUANTE */
+/* -------------------------------------------
+   TELA DE LOGIN PREMIUM (DNA CÓDIGO DE OURO) 
+   ------------------------------------------- */
+.wrap { justify-content: center !important; align-items: center !important; background-color: #050505 !important;}
+.wrap form { background: #0E0E0E !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; border-radius: 30px !important; padding: 40px !important; box-shadow: 0 15px 40px rgba(0,0,0,0.8) !important; max-width: 420px !important; margin: 0 auto !important; }
+.wrap form h2 { display: none !important; } /* Oculta título padrão */
+.wrap form label { color: #888 !important; font-weight: 600 !important; }
+.wrap form input { background: #151515 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #FFFFFF !important; padding: 15px !important;}
+.wrap form input:focus { border-color: #D4AF37 !important; box-shadow: 0 0 10px rgba(212, 175, 55, 0.2) !important; outline: none !important;}
+.wrap form button { background: linear-gradient(145deg, #D4AF37, #B58500) !important; color: #000000 !important; border: none !important; border-radius: 30px !important; font-weight: 700 !important; padding: 15px !important; font-size: 16px !important; margin-top: 15px !important; cursor: pointer !important; transition: all 0.3s ease !important;}
+.wrap form button:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 15px rgba(212, 175, 55, 0.3) !important; }
+
+/* ABAS PÍLULAS */
 .tabs {border: none !important; background: transparent !important;}
 .tab-nav {border-bottom: none !important; justify-content: center !important; font-size: 1.05em !important; margin-bottom: 25px; gap: 12px; padding-top: 10px;}
 .tab-nav button {border-radius: 40px !important; border: 1px solid #222 !important; padding: 10px 26px !important; background: #0A0A0A !important; color: #999 !important; font-weight: 500; transition: all 0.3s ease;}
 .tab-nav button.selected {background: linear-gradient(145deg, #D4AF37, #B58500) !important; color: #000000 !important; border: none !important; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3) !important; font-weight: 700;}
 
-/* PAINÉIS ARREDONDADOS E LIMPOS */
+/* PAINÉIS ARREDONDADOS */
 .box-painel {border-radius: 28px !important; padding: 28px !important; margin-bottom: 20px; background: #0E0E0E !important; border: 1px solid rgba(212, 175, 55, 0.1) !important; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5) !important;}
 
-/* CHAT CENTRAL - BOLHAS */
+/* CHAT CENTRAL */
 .chat-container {border-radius: 28px !important; overflow: hidden; background: #0A0A0A !important; border: 1px solid rgba(255, 255, 255, 0.05) !important;}
 .message-wrap {border-radius: 28px !important;}
 .message {border-radius: 24px !important; padding: 16px 22px !important; font-size: 15.5px !important; line-height: 1.5;}
-
-/* Bolha do Usuário (Transparente com Borda Dourada Fina) */
 .message.user {background: rgba(212, 175, 55, 0.03) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFFFFF !important;}
-/* Bolha da IA (Cinza Escuro Clean) */
 .message.bot {background: #151515 !important; border: 1px solid #222 !important; color: #E0E0E0 !important;}
 
-/* INPUTS E CAIXAS DE TEXTO */
+/* INPUTS INTERNOS */
 input, textarea { background: #111 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #fff !important;}
 input:focus, textarea:focus { border-color: #D4AF37 !important; box-shadow: 0 0 8px rgba(212, 175, 55, 0.2) !important;}
 
-/* BOTÕES PRIMÁRIOS DOURADOS */
+/* BOTÕES GERAIS DOURADOS */
 button.primary {background: linear-gradient(145deg, #D4AF37, #B58500) !important; color: #000000 !important; border: none !important; border-radius: 30px !important; font-weight: 700 !important;}
 button.primary:hover {transform: translateY(-2px); box-shadow: 0 6px 15px rgba(212, 175, 55, 0.3);}
 
@@ -423,12 +427,20 @@ button.primary:hover {transform: translateY(-2px); box-shadow: 0 6px 15px rgba(2
 ::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
 """
 
+# HTML Injetado na tela de Login do Gradio
+mensagem_login_ouro = """
+<div style="text-align: center; margin-bottom: 25px;">
+    <h1 style="color: #D4AF37; font-size: 32px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 4px; font-family: 'Inter', sans-serif; text-shadow: 0px 4px 20px rgba(212, 175, 55, 0.3);">CÓDIGO DE OURO</h1>
+    <p style="color: #888888; font-size: 13px; margin-top: 5px; font-weight: 500; letter-spacing: 2px;">ACESSO RESTRITO</p>
+</div>
+"""
+
 # ==========================================
 # 7. CONSTRUÇÃO DA INTERFACE VISUAL
 # ==========================================
 with gr.Blocks(title="Código de Ouro", theme=tema_base, css=css_ouro, head=PWA_HEAD) as interface:
     
-    # --- LOGOTIPO OFICIAL DO CÓDIGO DE OURO ---
+    # --- LOGOTIPO OFICIAL DO CÓDIGO DE OURO (Página Principal) ---
     gr.HTML("""
     <div class="logo-container">
         <h1 class="logo-title">CÓDIGO DE OURO</h1>
@@ -504,5 +516,11 @@ for i in ["", "_1", "_2", "_3"]:
     s = os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
     if u and s: lista_usuarios.append((u, s))
 
-# A propriedade JS força o fundo da página nativa do Gradio a ficar perfeitamente escuro
-interface.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)), auth=lista_usuarios, js="() => document.body.classList.add('dark')")
+# A mágica que insere a Logo no Login e força o Dark Mode universalmente
+interface.launch(
+    server_name="0.0.0.0", 
+    server_port=int(os.environ.get("PORT", 10000)), 
+    auth=lista_usuarios, 
+    auth_message=mensagem_login_ouro, 
+    js="() => document.body.classList.add('dark')"
+)
