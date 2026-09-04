@@ -47,25 +47,33 @@ for d in [DIRETORIO, DIR_CASOS, DIR_MIDIA, DIR_CHATS]:
     os.makedirs(d, exist_ok=True)
 
 # ==========================================
-# 2.5. CAPTURA DA LOGO PARA O SITE E PARA O APP DE CELULAR
+# 2.5. RADAR DA LOGOMARCA OFICIAL
 # ==========================================
 TAG_LOGO = ""
 FAVICON_TAGS = ""
-nome_logo = "chamariz-sem-fundo.png"
+caminho_logo = None
 
-if os.path.exists(nome_logo):
-    with open(nome_logo, "rb") as f:
+for root_dir, _, files in os.walk("."):
+    for f in files:
+        if "chamariz" in f.lower() and f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+            caminho_logo = os.path.join(root_dir, f)
+            break
+    if caminho_logo:
+        break
+
+if caminho_logo:
+    with open(caminho_logo, "rb") as f:
         b64_logo = base64.b64encode(f.read()).decode('utf-8')
-        # Logo do Painel
-        TAG_LOGO = f'<img src="data:image/png;base64,{b64_logo}" style="max-height: 85px; margin: 0 auto 15px auto; display: block; filter: drop-shadow(0px 4px 15px rgba(212, 175, 55, 0.4));" alt="Código de Ouro" />'
-        # Ícone de Instalação do Celular (PWA App Icon)
+        TAG_LOGO = f'<img src="data:image/png;base64,{b64_logo}" style="max-height: 85px; max-width: 100%; margin: 0 auto 15px auto; display: block; filter: drop-shadow(0px 4px 15px rgba(212, 175, 55, 0.4));" alt="Código de Ouro" />'
         FAVICON_TAGS = f"""
         <link rel="icon" type="image/png" href="data:image/png;base64,{b64_logo}">
         <link rel="apple-touch-icon" href="data:image/png;base64,{b64_logo}">
         <link rel="shortcut icon" href="data:image/png;base64,{b64_logo}">
         """
+else:
+    TAG_LOGO = '<div style="color:#D4AF37; text-align:center; font-weight:bold; margin-bottom:15px;">[LOGO_AQUI]</div>'
 
-# --- GESTÃO DE SESSÕES E ARQUIVOS ---
+# --- GESTÃO DE SESSÕES ---
 def listar_sessoes_chat():
     sessoes = [f.replace('.json', '') for f in os.listdir(DIR_CHATS) if f.endswith('.json')]
     sessoes.sort(reverse=True)
@@ -330,7 +338,7 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
     except Exception as e: return f"Erro: {e}", None, "", ""
 
 # ==========================================
-# 6. CONFIGURAÇÕES VISUAIS E HACKS CSS
+# 6. DESIGN SYSTEM E RESPONSIVIDADE LIQUIDA
 # ==========================================
 
 tema_ouro = gr.themes.Soft(font=[gr.themes.GoogleFont("Inter"), "sans-serif"]).set(
@@ -342,9 +350,8 @@ tema_ouro = gr.themes.Soft(font=[gr.themes.GoogleFont("Inter"), "sans-serif"]).s
     block_border_width="0px"
 )
 
-# AQUI ESTÁ A MÁGICA DO ÍCONE NO CELULAR:
 PWA_HEAD = f"""
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Código Ouro">
@@ -355,61 +362,86 @@ PWA_HEAD = f"""
 
 LOGIN_HACK = """
 <style>
-    body, main, .wrap { background-color: #000 !important; color: #fff !important;}
-    form { background: #0A0A0A !important; border: 1px solid rgba(212,175,55,0.4) !important; border-radius: 30px !important; box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important; padding: 40px !important; max-width: 90% !important; margin: auto !important; }
-    button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; font-weight: 800 !important; border-radius: 30px !important; border: none !important; font-size: 16px !important; margin-top: 15px !important; transition: 0.3s !important;}
+    * { box-sizing: border-box !important; }
+    body, main, .wrap { background-color: #000 !important; color: #fff !important; margin: 0; padding: 0; width: 100%; overflow-x: hidden;}
+    form { background: #0A0A0A !important; border: 1px solid rgba(212,175,55,0.4) !important; border-radius: 30px !important; box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important; padding: 40px !important; max-width: 90% !important; margin: auto !important; width: 400px;}
+    button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; font-weight: 800 !important; border-radius: 30px !important; border: none !important; font-size: 16px !important; margin-top: 15px !important; transition: 0.3s !important; width: 100%;}
     button.primary:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(212,175,55,0.5) !important; }
-    input { background-color: #111 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #D4AF37 !important; padding: 12px !important; }
+    input { background-color: #111 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #D4AF37 !important; padding: 12px !important; width: 100%;}
     form h2 { display: none !important; }
 </style>
-<div style="text-align: center; margin-bottom: 30px;">
+<div style="text-align: center; margin-bottom: 30px; width: 100%;">
     [LOGO_PLACEHOLDER]
     <h1 style="color: #D4AF37; font-size: clamp(24px, 6vw, 38px); font-weight: 900; margin: 0; letter-spacing: 2px;">CÓDIGO DE OURO</h1>
     <p style="color: #666; font-size: 12px; margin-top: 5px; font-weight: 700; letter-spacing: 3px;">ACESSO RESTRITO</p>
 </div>
 """.replace("[LOGO_PLACEHOLDER]", TAG_LOGO)
 
+# CSS Totalmente Fluido. Box-sizing corrige o vazamento da tela.
 CSS_APP = """
-body, html { margin: 0 !important; padding: 0 !important; background-color: #000 !important; overflow-x: hidden !important; max-width: 100vw !important;}
+* { box-sizing: border-box !important; }
+body, html { margin: 0 !important; padding: 0 !important; background-color: #000 !important; overflow-x: hidden !important; width: 100% !important; height: 100% !important; }
 footer {display: none !important;}
-.gradio-container { max-width: 100vw !important; border: none !important; overflow-x: hidden !important; box-sizing: border-box !important;}
-.contain { padding: 0 !important; }
+
+/* Gradio Container Liquido */
+.gradio-container { max-width: 100% !important; width: 100% !important; border: none !important; overflow-x: hidden !important; margin: 0 !important; padding: 0 !important;}
+.contain { padding: 0 !important; width: 100% !important;}
+
+/* Botão da Sidebar */
 .sidebar-button, button[aria-label*="sidebar" i], button[title*="sidebar" i] { position: fixed !important; top: 15px !important; left: 15px !important; background-color: #0E0E0E !important; border: 1px solid #D4AF37 !important; border-radius: 50% !important; z-index: 999999 !important; box-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important; width: 45px !important; height: 45px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;}
 .sidebar-button svg, button[aria-label*="sidebar" i] svg, button[title*="sidebar" i] svg { color: #D4AF37 !important; stroke: #D4AF37 !important; fill: transparent !important; width: 22px !important; height: 22px !important;}
-.sidebar { background-color: #050505 !important; border-right: 1px solid #111 !important; width: 280px !important; padding: 20px !important; }
-.logo-container { text-align: center; padding: 10px 0 20px 0; border-bottom: 1px solid #111; margin-bottom: 20px;}
+
+/* Sidebar */
+.sidebar { background-color: #050505 !important; border-right: 1px solid #111 !important; width: 280px !important; padding: 20px !important; height: 100vh !important; }
+.logo-container { text-align: center; padding: 10px 0 20px 0; border-bottom: 1px solid #111; margin-bottom: 20px; width: 100%;}
 .logo-title { color: #D4AF37; font-size: 22px; font-weight: 900; margin: 0; letter-spacing: 2px;}
+
+/* Botões Secundários */
 button.secondary, .dropdown { background-color: #111 !important; color: #CCC !important; border: 1px solid #333 !important; border-radius: 15px !important; transition: 0.3s !important;}
 button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !important; }
-.tabs { margin-top: 0 !important; border: none !important; width: 100vw !important;}
-.tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 10px !important;}
+
+/* Abas */
+.tabs { margin-top: 0 !important; border: none !important; width: 100% !important; }
+.tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 10px !important; width: 100%; flex-wrap: wrap;}
 .tab-nav button { background: transparent !important; color: #666 !important; border: none !important; border-radius: 20px !important; padding: 8px 15px !important; font-size: 14px !important;}
 .tab-nav button.selected { color: #D4AF37 !important; background: #0A0A0A !important; border: 1px solid #222 !important; font-weight: bold;}
-.chat-container { background: transparent !important; border: none !important; height: 82vh !important; }
-.chatbot { background: transparent !important; border: none !important; max-width: 900px !important; margin: 0 auto !important; width: 100% !important; overflow-x: hidden !important;}
-.message-wrap { padding: 20px 0 !important; }
-.message { border-radius: 20px !important; padding: 15px 20px !important; font-size: 16px !important; line-height: 1.6; max-width: 85% !important; word-wrap: break-word !important;}
+
+/* Chat Central Responsivo */
+.chat-container { display: flex !important; flex-direction: column !important; height: 85vh !important; width: 100% !important; background: transparent !important; border: none !important; }
+.chatbot { flex-grow: 1 !important; background: transparent !important; border: none !important; max-width: 900px !important; margin: 0 auto !important; width: 100% !important; overflow-x: hidden !important;}
+
+/* Mensagens */
+.message-wrap { padding: 20px 0 !important; width: 100% !important;}
+.message { border-radius: 20px !important; padding: 15px 20px !important; font-size: 16px !important; line-height: 1.6; max-width: 85% !important; word-wrap: break-word !important; word-break: break-word !important;}
 .message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
 .message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important;}
-.chat-container > div:last-child, .chat-container form { background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; max-width: 900px !important; margin: 0 auto 15px auto !important; width: 95% !important; box-sizing: border-box !important;}
-.chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; }
+
+/* Caixa de Input (Pílula) */
+.chat-container > div:last-child, .chat-container form { background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; max-width: 900px !important; width: 96% !important; margin: 0 auto 15px auto !important; }
+.chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; width: 100% !important;}
 .chat-container textarea:focus { border: none !important; box-shadow: none !important; }
+
+/* Microfone */
 .mic-btn-gold { transition: all 0.3s ease; }
 .mic-btn-gold:hover { color: #D4AF37 !important; transform: scale(1.1); }
 @keyframes pulse-anim { 0% { transform: scale(1); opacity: 1; color: #D4AF37; } 50% { transform: scale(1.2); opacity: 0.8; color: #FF4444; } 100% { transform: scale(1); opacity: 1; color: #D4AF37; } }
 .pulse-anim { animation: pulse-anim 1.5s infinite; color: #D4AF37 !important; }
+
+/* Diversos */
 button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
 button.primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
-input { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; max-width: 100% !important;}
+input { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; width: 100% !important;}
 ::-webkit-scrollbar {width: 6px; height: 6px;}
 ::-webkit-scrollbar-track {background: transparent;}
 ::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
+
+/* ================= MEDIA QUERIES MOBILE RIGOROSO ================= */
 @media screen and (max-width: 768px) {
-    .logo-title { font-size: 18px !important; letter-spacing: 1px !important;}
-    .sidebar { width: 100vw !important; padding: 10px !important; border-right: none !important; }
-    .chat-container { height: 78vh !important; }
-    .message { max-width: 92% !important; font-size: 15px !important; padding: 12px 18px !important; }
-    .chat-container > div:last-child, .chat-container form { width: 98% !important; max-width: 98% !important; margin: 0 auto 10px auto !important; border-radius: 25px !important; }
+    .sidebar { width: 100% !important; height: 100% !important; position: fixed !important; z-index: 9999999 !important; border-right: none !important; }
+    .chat-container { height: 80vh !important; width: 100% !important;}
+    .message { max-width: 95% !important; font-size: 15px !important; padding: 12px 15px !important; }
+    .chat-container > div:last-child, .chat-container form { width: 94% !important; max-width: 94% !important; border-radius: 25px !important; }
+    .tab-nav button { padding: 6px 10px !important; font-size: 13px !important; }
 }
 """
 
@@ -468,7 +500,7 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interfa
 
     with gr.Sidebar(open=True):
         gr.HTML(f"""
-        <div class="logo-container">
+        <div class="logo-container" style="width: 100%;">
             {TAG_LOGO}
             <h1 class="logo-title">CÓDIGO DE OURO</h1>
         </div>
@@ -477,7 +509,7 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interfa
         gr.Markdown("### 📜 Histórico")
         lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), label="", interactive=True)
         btn_load = gr.Button("Abrir Conversa", variant="secondary")
-        btn_atualizar = gr.Button("🔄 Atualizar Histórico", variant="secondary")
+        btn_atualizar = gr.Button("🔄 Atualizar", variant="secondary")
         btn_atualizar.click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
 
     with gr.Tabs():
@@ -486,11 +518,12 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interfa
                 with gr.Row():
                     persona = gr.Dropdown(choices=["Assistente Padrão", "Especialista em Marketing", "Analista de Dados"], value="Assistente Padrão", label="Especialidade", scale=2)
                     net = gr.Checkbox(label="🌐 Web", scale=1)
-                    btn_exportar = gr.Button("💾 Exportar (Word)", variant="secondary", scale=1)
+                    btn_exportar = gr.Button("💾 Exportar", variant="secondary", scale=1)
             
+            # Aqui removi a altura fixa de 700px. Agora o CSS é quem manda e se adapta.
             chat = gr.ChatInterface(
                 fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
-                chatbot=gr.Chatbot(height=700, show_label=False), textbox=gr.MultimodalTextbox(placeholder="Envie uma mensagem, foto ou documento...", container=False)
+                chatbot=gr.Chatbot(show_label=False), textbox=gr.MultimodalTextbox(placeholder="Envie uma mensagem...", container=False)
             )
             arq_exportado = gr.File(label="Arquivo", visible=False)
             btn_exportar.click(exportar_conversa_docx, chat.chatbot, arq_exportado).then(lambda: gr.update(visible=True), None, arq_exportado)
@@ -519,8 +552,15 @@ for i in ["", "_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9"]:
     s = os.environ.get(f"LOGIN_SENHA{i}") or os.environ.get(f"SENHA{i}")
     if u and s: usuarios.append((u, s))
 
-interface.launch(
-    server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)),
-    auth=usuarios if usuarios else None, auth_message=LOGIN_HACK, 
-    js=JS_CODE, head=PWA_HEAD
-)
+launch_args = {
+    "server_name": "0.0.0.0", 
+    "server_port": int(os.environ.get("PORT", 10000)),
+    "auth": usuarios if usuarios else None, 
+    "auth_message": LOGIN_HACK, 
+    "js": JS_CODE, 
+    "head": PWA_HEAD
+}
+
+if caminho_logo: launch_args["favicon_path"] = caminho_logo
+
+interface.launch(**launch_args)
