@@ -49,6 +49,19 @@ DIR_CHATS = f"{DIRETORIO}/Historico_Chats"
 for d in [DIRETORIO, DIR_CASOS, DIR_MIDIA, DIR_CHATS]:
     os.makedirs(d, exist_ok=True)
 
+# ==========================================
+# 2.5. CAPTURA DA LOGOMARCA OFICIAL
+# ==========================================
+# O robô agora busca EXATAMENTE o nome do seu arquivo de imagem
+TAG_LOGO = ""
+nome_logo = "chamariz-sem-fundo.png"
+
+if os.path.exists(nome_logo):
+    with open(nome_logo, "rb") as f:
+        b64_logo = base64.b64encode(f.read()).decode('utf-8')
+        TAG_LOGO = f'<img src="data:image/png;base64,{b64_logo}" style="max-height: 85px; margin: 0 auto 15px auto; display: block; filter: drop-shadow(0px 4px 15px rgba(212, 175, 55, 0.4));" alt="Código de Ouro" />'
+
+# --- GESTÃO DE SESSÕES ---
 def listar_sessoes_chat():
     sessoes = [f.replace('.json', '') for f in os.listdir(DIR_CHATS) if f.endswith('.json')]
     sessoes.sort(reverse=True)
@@ -326,7 +339,6 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
 # 6. DESIGN SYSTEM: WORKSTATION DOLA/CHATGPT
 # ==========================================
 
-# O tema força fundo preto absoluto sem margens brancas
 tema_ouro = gr.themes.Soft(
     font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"],
 ).set(
@@ -338,76 +350,65 @@ tema_ouro = gr.themes.Soft(
     block_border_width="0px"
 )
 
-# LOGIN HACK - Mantém a tela de autenticação luxuosa
-LOGIN_HACK = """
+# LOGIN HACK (Com Injeção Inteligente da Logo)
+LOGIN_HACK = f"""
 <style>
-    body, main, .wrap { background-color: #000000 !important; color: #fff !important;}
-    form { background: #0A0A0A !important; border: 1px solid rgba(212, 175, 55, 0.4) !important; border-radius: 30px !important; box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important; padding: 40px !important; max-width: 420px !important; margin: auto !important; }
-    button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000000 !important; font-weight: 800 !important; text-transform: uppercase !important; border-radius: 30px !important; border: none !important; font-size: 16px !important; letter-spacing: 1px !important; margin-top: 15px !important; transition: 0.3s !important;}
-    button.primary:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5) !important; }
-    input { background-color: #111111 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #D4AF37 !important; padding: 12px !important; }
-    input:focus { border-color: #D4AF37 !important; outline: none !important; }
-    form h2 { display: none !important; }
+    body, main, .wrap {{ background-color: #000000 !important; color: #fff !important;}}
+    form {{ background: #0A0A0A !important; border: 1px solid rgba(212, 175, 55, 0.4) !important; border-radius: 30px !important; box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important; padding: 40px !important; max-width: 420px !important; margin: auto !important; }}
+    button.primary {{ background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000000 !important; font-weight: 800 !important; text-transform: uppercase !important; border-radius: 30px !important; border: none !important; font-size: 16px !important; letter-spacing: 1px !important; margin-top: 15px !important; transition: 0.3s !important;}}
+    button.primary:hover {{ transform: scale(1.02); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5) !important; }}
+    input {{ background-color: #111111 !important; border: 1px solid #333 !important; border-radius: 20px !important; color: #D4AF37 !important; padding: 12px !important; }}
+    input:focus {{ border-color: #D4AF37 !important; outline: none !important; }}
+    form h2 {{ display: none !important; }}
 </style>
 <div style="text-align: center; margin-bottom: 30px;">
+    {TAG_LOGO}
     <h1 style="color: #D4AF37; font-size: 38px; font-weight: 900; margin: 0; letter-spacing: 4px; font-family: 'Inter', sans-serif; text-shadow: 0px 4px 25px rgba(212, 175, 55, 0.4);">CÓDIGO DE OURO</h1>
     <p style="color: #666; font-size: 12px; margin-top: 5px; font-weight: 700; letter-spacing: 3px;">ACESSO RESTRITO</p>
 </div>
 """
 
-# CSS DO SITE PRINCIPAL (Layout Full-Screen, Sidebar Esq, Input Flutuante)
 CSS_APP = """
-/* RESET GLOBAL */
 footer {display: none !important;}
 body, html { margin: 0 !important; padding: 0 !important; background-color: #000000 !important; }
 
-/* FORÇA O SITE A OCUPAR A TELA TODA */
 .gradio-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
 .contain { padding: 0 !important; }
 
-/* SIDEBAR NATIVA (Estilo ChatGPT / Dola Esq) */
+/* SIDEBAR NATIVA */
 .sidebar { background-color: #050505 !important; border-right: 1px solid #111 !important; width: 280px !important; padding: 20px !important; }
-
-/* LOGO NA SIDEBAR */
-.logo-container { text-align: left; padding: 10px 0 30px 0; border-bottom: 1px solid #111; margin-bottom: 20px;}
+.logo-container { text-align: center; padding: 10px 0 30px 0; border-bottom: 1px solid #111; margin-bottom: 20px;}
 .logo-title { color: #D4AF37; font-size: 22px; font-weight: 900; margin: 0; letter-spacing: 2px; text-shadow: 0 0 15px rgba(212,175,55,0.2);}
 
-/* ABAS SUPERIORES (Clean e Sutis) */
+/* ABAS SUPERIORES */
 .tabs { margin-top: 0 !important; border: none !important; }
 .tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 15px !important;}
 .tab-nav button { background: transparent !important; color: #666 !important; border: none !important; border-radius: 20px !important; padding: 8px 25px !important; font-size: 15px !important;}
 .tab-nav button.selected { color: #D4AF37 !important; background: #0A0A0A !important; border: 1px solid #222 !important; font-weight: bold;}
 
-/* CHAT CENTRAL (Ocupa o meio, altura máxima) */
+/* CHAT CENTRAL */
 .chat-container { background: transparent !important; border: none !important; height: 85vh !important; }
 .chatbot { background: transparent !important; border: none !important; max-width: 900px !important; margin: 0 auto !important; width: 100% !important; }
 
-/* MENSAGENS (BALÕES) */
+/* BALÕES DE MENSAGEM */
 .message-wrap { padding: 20px 0 !important; }
 .message { border-radius: 20px !important; padding: 15px 25px !important; font-size: 16px !important; line-height: 1.6; max-width: 80% !important; }
 .message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFFFFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
 .message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important;}
 
-/* A PÍLULA FLUTUANTE DE DIGITAR MENSAGEM (O SEGREDO DO LAYOUT) */
+/* A PÍLULA FLUTUANTE DE DIGITAR MENSAGEM */
 .chat-container > div:last-child, .chat-container form { 
-    background: #0E0E0E !important; 
-    border: 1px solid #333 !important; 
-    border-radius: 30px !important; 
-    padding: 5px 15px !important; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; 
-    max-width: 850px !important; 
-    margin: 0 auto 20px auto !important; 
-    width: 100% !important; 
+    background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; 
+    padding: 5px 15px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; 
+    max-width: 850px !important; margin: 0 auto 20px auto !important; width: 100% !important; 
 }
 .chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; }
 .chat-container textarea:focus { border: none !important; box-shadow: none !important; }
 
-/* BOTÕES E INPUTS GERAIS */
 button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
 button.primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
 input, .dropdown { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; }
 
-/* BARRAS DE ROLAGEM */
 ::-webkit-scrollbar {width: 6px; height: 6px;}
 ::-webkit-scrollbar-track {background: transparent;}
 ::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
@@ -420,10 +421,10 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interfa
     
     id_sessao_atual = gr.State(f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}")
 
-    # A SIDEBAR FICA ABERTA POR PADRÃO NO COMPUTADOR (Igual Dola/ChatGPT)
     with gr.Sidebar(open=True):
-        gr.HTML("""
+        gr.HTML(f"""
         <div class="logo-container">
+            {TAG_LOGO}
             <h1 class="logo-title">CÓDIGO DE OURO</h1>
         </div>
         """)
@@ -433,7 +434,6 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interfa
         btn_load = gr.Button("Abrir Conversa")
         gr.Button("🔄 Atualizar Histórico").click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
 
-    # CONTEÚDO PRINCIPAL (DIREITA)
     with gr.Tabs():
         
         with gr.TabItem("💬 Chat IA"):
@@ -471,7 +471,8 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interfa
 # ==========================================
 usuarios = []
 for i in ["", "_1", "_2", "_3"]:
-    u, s = os.environ.get(f"LOGIN_USUARIO{i}" if i=="" else f"USUARIO{i}"), os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
+    u, s = os.environ.get(f"LOGIN_USUARIO{i}" if i=="" else f"USUARIO{i}")
+    s = os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
     if u and s: usuarios.append((u, s))
 
 interface.launch(
