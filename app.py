@@ -56,19 +56,15 @@ for root_dir, _, files in os.walk("."):
         if "chamariz" in f.lower() and f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
             caminho_logo = os.path.join(root_dir, f)
             break
-    if caminho_logo:
-        break
+    if caminho_logo: break
 
 if caminho_logo:
     with open(caminho_logo, "rb") as f:
         b64_logo = base64.b64encode(f.read()).decode('utf-8')
-        TAG_LOGO = f'<img src="data:image/png;base64,{b64_logo}" style="max-height: 85px; max-width: 100%; margin: 0 auto; display: block; filter: drop-shadow(0px 0px 15px rgba(212, 175, 55, 0.5));" alt="Código de Ouro" />'
-        FAVICON_TAGS = f"""
-        <link rel="icon" type="image/png" href="data:image/png;base64,{b64_logo}">
-        <link rel="apple-touch-icon" href="data:image/png;base64,{b64_logo}">
-        """
+        TAG_LOGO = f'<img src="data:image/png;base64,{b64_logo}" style="max-height: 70px; margin: 0 auto; display: block;" alt="Código de Ouro" />'
+        FAVICON_TAGS = f'<link rel="icon" type="image/png" href="data:image/png;base64,{b64_logo}">'
 else:
-    TAG_LOGO = '<div style="color:#D4AF37; text-align:center; font-weight:900; font-size: 24px; letter-spacing: 2px;">CÓDIGO DE OURO</div>'
+    TAG_LOGO = '<div style="color:#D4AF37; text-align:center; font-weight:bold; font-size: 20px;">CÓDIGO DE OURO</div>'
 
 # --- GESTÃO DE SESSÕES ---
 def listar_sessoes_chat():
@@ -85,16 +81,6 @@ def carregar_sessao_chat(id_sessao):
 def iniciar_novo_chat():
     novo_id = f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}"
     return [], novo_id, gr.update(choices=listar_sessoes_chat(), value=novo_id)
-
-def listar_arquivos_mortos():
-    arquivos = []
-    for d in [DIR_CASOS, DIR_MIDIA]:
-        if os.path.exists(d):
-            for root, _, files in os.walk(d):
-                for f in files:
-                    if f.endswith(('.docx', '.pdf', '.mp3', '.jpg', '.mp4')): arquivos.append(os.path.join(root, f))
-    arquivos.sort(key=os.path.getmtime, reverse=True)
-    return arquivos
 
 def atualizar_galeria_imagens():
     imgs = []
@@ -174,33 +160,33 @@ def responder_chat_central(mensagem, historico, persona, usar_internet, id_sessa
     contexto_extra = ""
     imagens_anexadas = []
     
-    yield "⏳ *Sincronizando com a base de dados...*"
+    yield "⏳ *Sincronizando ambiente...*"
     
     for arq in arquivos:
         ext = arq.lower()
         if ext.endswith(('.png', '.jpg', '.jpeg', '.webp')):
             imagens_anexadas.append(arq)
-            yield f"👁️ *Analisando a imagem...*"
+            yield f"👁️ *Analisando imagem...*"
         else:
-            yield f"📄 *Extraindo dados do documento...*"
+            yield f"📄 *Lendo documento...*"
             contexto_extra += f"\n[DOCUMENTO]:\n{extrair_texto(arq)}\n"
             
     if usar_internet and texto_usuario:
-        yield "🌐 *Pesquisando na internet...*"
+        yield "🌐 *Buscando na Web em tempo real...*"
         try:
             resultados = DDGS().text(texto_usuario, max_results=4)
-            contexto_extra += "\n\n[WEB]:\n" + "\n".join([f"{r['title']} - {r['body']}" for r in resultados])
+            contexto_extra += "\n\n[DADOS DA WEB]:\n" + "\n".join([f"{r['title']} - {r['body']}" for r in resultados])
         except: pass
 
-    yield "🧠 *Processando IA...*"
+    yield "🧠 *Processando raciocínio...*"
 
     sys_prompt = f"""Você é a IA "Código de Ouro" operando no perfil {persona}.
-Aja de forma inteligente, direta e com alto nível de execução.
-PODERES EXECUTIVOS NO CHAT:
-1. GERAR IMAGEM: [AÇÃO_IMAGEM: prompt em inglês detalhado 8k photorealistic | vertical]
-2. EDITAR IMAGEM: [AÇÃO_EDITAR_IMAGEM: comando em inglês]
-3. GERAR VÍDEO: [AÇÃO_VIDEO: prompt curto em inglês]
-4. GERAR ÁUDIO: [AÇÃO_AUDIO: texto para falar em português]"""
+Aja de forma inteligente e direta.
+PODERES DE MÍDIA:
+1. GERAR IMAGEM: [AÇÃO_IMAGEM: prompt detalhado em inglês | vertical]
+2. EDITAR IMAGEM: [AÇÃO_EDITAR_IMAGEM: instrução em inglês]
+3. GERAR VÍDEO: [AÇÃO_VIDEO: cena em inglês]
+4. GERAR ÁUDIO: [AÇÃO_AUDIO: texto falado em pt-BR]"""
 
     mensagens = [{"role": "system", "content": sys_prompt}]
     
@@ -215,7 +201,7 @@ PODERES EXECUTIVOS NO CHAT:
     texto_final = (texto_usuario + contexto_extra).strip()
 
     if imagens_anexadas:
-        conteudo_multimodal = [{"type": "text", "text": texto_final if texto_final else "Analise esta imagem."}]
+        conteudo_multimodal = [{"type": "text", "text": texto_final if texto_final else "Descreva a imagem."}]
         for img in imagens_anexadas:
             conteudo_multimodal.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encode_file_b64(img)}"}})
         mensagens.append({"role": "user", "content": conteudo_multimodal})
@@ -231,7 +217,7 @@ PODERES EXECUTIVOS NO CHAT:
         delta = pedaco.choices[0].delta.content
         if delta:
             resposta_acumulada += delta
-            yield re.sub(r'\[AÇÃO_\w+:.*?\]', '⚙️ *(Acionando motor multimídia...)*', resposta_acumulada)
+            yield re.sub(r'\[AÇÃO_\w+:.*?\]', '⚙️ *(Gerando ativo multimídia...)*', resposta_acumulada)
 
     anexos_html = ""
     match_img = re.search(r'\[AÇÃO_IMAGEM:\s*(.*?)(?:\|\s*(\w+))?\]', resposta_acumulada)
@@ -241,7 +227,7 @@ PODERES EXECUTIVOS NO CHAT:
         cam_gerada = motor_gerar_imagem(prompt_i, prop_i)
         if cam_gerada:
             b64_img = encode_file_b64(cam_gerada)
-            anexos_html += f"\n\n**🖼️ Imagem:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:15px; border: 1px solid #D4AF37; margin-top:10px;' />\n"
+            anexos_html += f"\n\n**🖼️ Imagem:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:12px; margin-top:10px;' />\n"
 
     match_edit = re.search(r'\[AÇÃO_EDITAR_IMAGEM:\s*(.*?)\]', resposta_acumulada)
     if match_edit and imagens_anexadas:
@@ -249,7 +235,7 @@ PODERES EXECUTIVOS NO CHAT:
         cam_edit = motor_editar_imagem(imagens_anexadas[-1], prompt_e)
         if cam_edit:
             b64_img = encode_file_b64(cam_edit)
-            anexos_html += f"\n\n**✨ Edição:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:15px; border: 1px solid #D4AF37; margin-top:10px;' />\n"
+            anexos_html += f"\n\n**✨ Edição:**\n<img src='data:image/jpeg;base64,{b64_img}' style='max-width:100%; border-radius:12px; margin-top:10px;' />\n"
 
     match_aud = re.search(r'\[AÇÃO_AUDIO:\s*(.*?)\]', resposta_acumulada)
     if match_aud:
@@ -266,7 +252,7 @@ PODERES EXECUTIVOS NO CHAT:
         cam_vid = motor_gerar_video(prompt_v, img_referencia)
         if cam_vid:
             b64_vid = encode_file_b64(cam_vid)
-            anexos_html += f"\n\n**🎥 Vídeo:**\n<video controls style='max-width:100%; border-radius:15px; border: 1px solid #D4AF37; margin-top:10px;' src='data:video/mp4;base64,{b64_vid}'></video>\n"
+            anexos_html += f"\n\n**🎥 Vídeo:**\n<video controls style='max-width:100%; border-radius:12px; margin-top:10px;' src='data:video/mp4;base64,{b64_vid}'></video>\n"
 
     resposta_final_limpa = re.sub(r'\[AÇÃO_\w+:.*?\]', '', resposta_acumulada).strip() + anexos_html
     yield resposta_final_limpa
@@ -277,7 +263,7 @@ PODERES EXECUTIVOS NO CHAT:
         historico_atual = []
         if os.path.exists(arq_sessao):
             with open(arq_sessao, "r", encoding="utf-8") as f: historico_atual = json.load(f)
-        historico_atual.append({"role": "user", "content": texto_usuario if texto_usuario else "[Arquivo/Mídia]"})
+        historico_atual.append({"role": "user", "content": texto_usuario if texto_usuario else "[Arquivo]"})
         historico_atual.append({"role": "assistant", "content": resposta_final_limpa})
         with open(arq_sessao, "w", encoding="utf-8") as f: json.dump(historico_atual, f, ensure_ascii=False, indent=4)
     except: pass
@@ -286,23 +272,22 @@ def exportar_conversa_docx(historico):
     if not historico: return None
     pasta = f"{DIR_CASOS}/Exportacoes_{datetime.now().strftime('%d_%m_%H%M')}"
     os.makedirs(pasta, exist_ok=True)
-    cam_word = f"{pasta}/Chat.docx"
+    cam_word = f"{pasta}/Conversa.docx"
     doc = docx.Document()
-    doc.add_heading('Registro - Código de Ouro', 0)
+    doc.add_heading('Registro de Conversa', 0)
     for item in historico:
         if isinstance(item, dict):
-            autor = "Você:" if item.get("role") == "user" else "Código de Ouro:"
+            autor = "Você:" if item.get("role") == "user" else "IA:"
             doc.add_heading(autor, level=2)
             doc.add_paragraph(re.sub(r'<.*?>', '', item.get("content", "")))
     doc.save(cam_word)
     return cam_word
 
 def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
-    if not instrucao: return "⚠️ Forneça as instruções.", None, ""
-    palavras = 0
+    if not instrucao: return "⚠️ Instrução necessária.", None
     try:
-        progresso(0.1, desc="Lendo documentos...")
-        pasta = f"{DIR_CASOS}/Analise_{datetime.now().strftime('%d_%m_%Y__%Hh%M')}"
+        progresso(0.1, desc="Processando...")
+        pasta = f"{DIR_CASOS}/Analise_{datetime.now().strftime('%H%M')}"
         os.makedirs(pasta, exist_ok=True)
         banco = Chroma(persist_directory=DIR_CHROMA, embedding_function=embeddings)
         fatiador = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
@@ -310,254 +295,216 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
         if arquivos:
             for arq in arquivos:
                 txt = extrair_texto(arq)
-                palavras += len(txt.split())
-                banco.add_texts([f"[FONTE: {os.path.basename(arq.name)}]\n{c}" for c in fatiador.split_text(txt)])
+                banco.add_texts([f"FONTE:\n{c}" for c in fatiador.split_text(txt)])
             
-        progresso(0.5, desc="Analisando dados...")
+        progresso(0.5, desc="Analisando...")
         contexto = "\n".join([doc.page_content for doc in banco.similarity_search(instrucao, k=8)])
         prompt = f"DADOS:\n{contexto}\n\nINSTRUÇÃO: {instrucao}"
         resposta = cliente_groq.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=MODELO_GROQ, max_tokens=4000).choices[0].message.content
         
-        cam_word = f"{pasta}/Resultado.docx"
+        cam_word = f"{pasta}/Relatorio.docx"
         doc = docx.Document()
-        doc.add_heading('Análise Oficial', 0)
         doc.add_paragraph(resposta)
         doc.save(cam_word)
-        return "✅ Concluído!", cam_word, resposta
-    except Exception as e: return f"Erro: {e}", None, ""
+        return "✅ Sucesso!", cam_word
+    except Exception as e: return f"Erro: {e}", None
 
 # ==========================================
-# 6. ARQUITETURA DE DESIGN TITAN (OBSIDIAN & GOLD)
+# 6. TEMA "GEMINI CLONE" (Zero Conflitos de CSS)
 # ==========================================
-# Reset Base para Gradio
-tema_titan = gr.themes.Base(font=[gr.themes.GoogleFont("Inter"), "sans-serif"]).set(
-    body_background_fill="#050505", body_background_fill_dark="#050505",
-    background_fill_primary="#050505", background_fill_primary_dark="#050505",
-    background_fill_secondary="#0E0E12", background_fill_secondary_dark="#0E0E12",
-    block_background_fill="#0E0E12", block_background_fill_dark="#0E0E12",
-    border_color_primary="rgba(255, 255, 255, 0.05)", border_color_primary_dark="rgba(255, 255, 255, 0.05)",
-    block_border_width="1px", block_radius="20px",
-    body_text_color="#FFFFFF", body_text_color_dark="#FFFFFF",
-    body_text_color_subdued="#888888", body_text_color_subdued_dark="#888888",
-    color_accent_soft="rgba(212, 175, 55, 0.1)", color_accent_soft_dark="rgba(212, 175, 55, 0.1)",
+# Toda a configuração de cores agora acontece de forma NATIVA pelo Gradio.
+# Isso impede o "Erro" da tela e garante que dropdowns nunca fiquem brancos.
+tema_gemini = gr.themes.Default(
+    primary_hue=gr.themes.colors.amber,
+    neutral_hue=gr.themes.colors.zinc,
+    font=[gr.themes.GoogleFont("Inter"), "sans-serif"]
+).set(
+    body_background_fill="#131314",
+    body_background_fill_dark="#131314",
+    block_background_fill="#1E1F22",
+    block_background_fill_dark="#1E1F22",
+    border_color_primary="#333538",
+    border_color_primary_dark="#333538",
+    body_text_color="#E3E3E3",
+    body_text_color_dark="#E3E3E3",
+    block_title_text_color="#D4AF37",
+    block_title_text_color_dark="#D4AF37",
+    block_label_text_color="#D4AF37",
+    button_primary_background_fill="#D4AF37",
+    button_primary_background_fill_dark="#D4AF37",
+    button_primary_text_color="#000000",
+    button_primary_text_color_dark="#000000",
+    checkbox_background_color_selected="#D4AF37",
+    checkbox_background_color_selected_dark="#D4AF37",
+    block_radius="16px"
 )
 
 PWA_HEAD = f"""
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#050505">
+<meta name="theme-color" content="#131314">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Código Ouro">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 {FAVICON_TAGS}
 """
 
 LOGIN_HACK = """
 <style>
-    body, main, .wrap { background-color: #050505 !important; color: #fff !important; }
-    form { background: #0E0E12 !important; border: 1px solid rgba(212,175,55,0.2) !important; border-radius: 24px !important; box-shadow: 0 20px 40px rgba(0,0,0,0.8) !important; padding: 45px !important; max-width: 90% !important; margin: auto !important; width: 420px;}
-    button.primary { background: linear-gradient(135deg, #D4AF37, #AA7C11) !important; color: #000 !important; font-weight: 800 !important; border-radius: 12px !important; border: none !important; font-size: 16px !important; margin-top: 20px !important; transition: all 0.3s ease !important; width: 100%; padding: 14px !important;}
-    button.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(212,175,55,0.4) !important; }
-    input { background-color: #050505 !important; border: 1px solid #222 !important; border-radius: 12px !important; color: #D4AF37 !important; padding: 14px !important; width: 100%; transition: border 0.3s;}
-    input:focus { border-color: #D4AF37 !important; outline: none; }
+    body, main { background-color: #131314 !important; color: #fff !important; font-family: 'Inter', sans-serif;}
+    form { background: #1E1F22 !important; border: 1px solid #333538 !important; border-radius: 24px !important; padding: 40px !important; max-width: 90% !important; margin: auto !important; width: 400px;}
+    button.primary { background: #D4AF37 !important; color: #000 !important; font-weight: bold !important; border-radius: 12px !important; border: none !important; font-size: 16px !important; margin-top: 15px !important; padding: 12px !important;}
+    input { background-color: #131314 !important; border: 1px solid #333538 !important; border-radius: 10px !important; color: #D4AF37 !important; padding: 12px !important; width: 100%;}
     form h2 { display: none !important; }
 </style>
-<div style="text-align: center; margin-bottom: 30px; width: 100%;">
+<div style="text-align: center; margin-bottom: 30px;">
     [LOGO_PLACEHOLDER]
-    <h1 style="color: #D4AF37; font-size: clamp(22px, 5vw, 28px); font-weight: 900; margin: 0; letter-spacing: 3px; font-family: 'Inter', sans-serif;">CÓDIGO DE OURO</h1>
-    <p style="color: #666; font-size: 11px; margin-top: 8px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase;">Acesso Restrito</p>
+    <h1 style="color: #D4AF37; font-size: 24px; font-weight: 900; margin: 10px 0 0 0;">CÓDIGO DE OURO</h1>
 </div>
 """.replace("[LOGO_PLACEHOLDER]", TAG_LOGO)
 
-CSS_TITAN = """
-/* RESET TOTAL PARA NÃO QUEBRAR O GRADIO */
-body, html { font-family: 'Inter', sans-serif !important; background-color: #050505 !important; color: #F0F0F0 !important; }
+# Apenas estética visual. SEM regras de layout (width, height, flex, box-sizing) que quebravam o Gradio.
+CSS_GEMINI = """
 footer { display: none !important; }
 
-/* FIX CORES NATIVAS (Dropdowns, Inputs, Checkbox) */
-input[type="checkbox"] { appearance: auto !important; accent-color: #D4AF37 !important; width: 18px !important; height: 18px !important; cursor: pointer !important; transform: scale(1.1) !important; }
-.gradio-dropdown input, .gradio-dropdown select, .dropdown-menu, .options, input[type="text"], textarea { background-color: #0E0E12 !important; color: #FFF !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 12px !important; transition: border-color 0.3s !important;}
-input:focus, textarea:focus, .gradio-dropdown:focus-within { border-color: #D4AF37 !important; outline: none !important; box-shadow: 0 0 10px rgba(212, 175, 55, 0.1) !important;}
+/* Balões de Chat e Input do Gemini */
+.message { border-radius: 18px !important; font-size: 15px !important; padding: 12px 18px !important; }
+.message.user { background-color: #1E1F22 !important; border: 1px solid #333538 !important; }
+.message.bot { background-color: transparent !important; border: none !important; }
+.chat-container form { background-color: #1E1F22 !important; border: 1px solid #333538 !important; border-radius: 24px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;}
 
-/* SIDEBAR LUXURY */
-.sidebar { background: #0E0E12 !important; border-right: 1px solid rgba(255,255,255,0.05) !important; padding: 25px 20px !important; }
-.logo-container { text-align: center; margin-bottom: 30px; }
-.logo-container img { margin-bottom: 15px; }
+/* Esconde labels desncessárias */
+.gr-box > label { display: none !important; }
 
-/* BOTÕES GERAIS */
-button.primary { background: linear-gradient(135deg, #D4AF37, #AA7C11) !important; color: #000 !important; font-weight: bold !important; border-radius: 12px !important; border: none !important; transition: all 0.3s ease !important; }
-button.primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3) !important; }
-button.secondary { background: transparent !important; color: #AAA !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 12px !important; transition: all 0.3s !important; }
-button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !important; background: rgba(212, 175, 55, 0.05) !important;}
-
-/* ABAS "PÍLULA" TECNOLÓGICAS */
-.tabs { border: none !important; background: transparent !important; }
-.tab-nav { background: rgba(255,255,255,0.02) !important; border: 1px solid rgba(255,255,255,0.05) !important; border-radius: 50px !important; padding: 6px !important; margin: 15px auto 25px auto !important; width: fit-content !important; display: flex !important; gap: 5px !important; }
-.tab-nav button { background: transparent !important; color: #888 !important; border: none !important; border-radius: 50px !important; padding: 8px 20px !important; font-weight: 600 !important; font-size: 14px !important; transition: 0.3s !important;}
-.tab-nav button.selected { background: #D4AF37 !important; color: #000 !important; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3) !important;}
-
-/* CHAT MASTER (LIMPO E SEM BORDAS VAZANDO) */
-.chatbot { background: transparent !important; border: none !important; }
-.message-wrap { padding: 10px 0 !important; }
-.message { font-size: 16px !important; line-height: 1.6 !important; padding: 18px 24px !important; max-width: 80% !important; border-radius: 20px !important; box-shadow: none !important;}
-.message.user { background: #15151A !important; border: 1px solid rgba(212,175,55,0.2) !important; color: #FFF !important; margin-left: auto !important; border-bottom-right-radius: 4px !important; }
-.message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important; }
-
-/* CAIXA DE DIGITAR PÍLULA FLUTUANTE */
-.chat-container > div:last-child, .chat-container form { background: #0E0E12 !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 30px !important; padding: 6px 15px !important; margin: 0 auto 20px auto !important; max-width: 850px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important; transition: border 0.3s !important;}
-.chat-container form:focus-within { border-color: #D4AF37 !important; }
-
-/* MICROFONE TECNOLÓGICO FIXO */
-#btn-mic-titan { position: fixed !important; bottom: 25px !important; right: 25px !important; width: 65px !important; height: 65px !important; border-radius: 50% !important; background: rgba(14, 14, 18, 0.9) !important; backdrop-filter: blur(10px) !important; border: 1px solid rgba(212, 175, 55, 0.5) !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; z-index: 999999 !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;}
-#btn-mic-titan svg { color: #D4AF37 !important; stroke: #D4AF37 !important; width: 28px !important; height: 28px !important; transition: all 0.3s !important; }
-#btn-mic-titan:hover { transform: scale(1.1) !important; border-color: #D4AF37 !important; box-shadow: 0 15px 35px rgba(212,175,55,0.3) !important; background: #111 !important;}
-
-@keyframes mic-record-anim { 
-    0% { box-shadow: 0 0 0 0 rgba(255, 50, 50, 0.6); border-color: #ff3333; background: #220000; } 
-    70% { box-shadow: 0 0 20px 20px rgba(255, 50, 50, 0); border-color: #ff5555; background: #330000; } 
-    100% { box-shadow: 0 0 0 0 rgba(255, 50, 50, 0); border-color: #ff3333; background: #220000; } 
+/* Estilo do Botão Microfone Isolado */
+#btn-mic-gemini {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #1E1F22;
+    border: 1px solid #333538;
+    color: #D4AF37;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    z-index: 9999;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s;
 }
-.mic-on { animation: mic-record-anim 1.5s infinite !important; }
-.mic-on svg { stroke: #ff5555 !important; }
+#btn-mic-gemini:hover { background-color: #333538; }
+.mic-active { background-color: #ff4444 !important; border-color: #ff4444 !important; color: #fff !important; animation: mic-pulse 1.5s infinite; }
+@keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.6); } 70% { box-shadow: 0 0 0 15px rgba(255, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); } }
 
-/* BARRAS DE ROLAGEM E CUSTOMIZAÇÕES GERAIS */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
-
-/* ================= MOBILE ================= */
 @media screen and (max-width: 768px) {
-    .tab-nav { width: 95% !important; overflow-x: auto !important; flex-wrap: nowrap !important; justify-content: flex-start !important; padding: 5px !important;}
-    .tab-nav button { flex-shrink: 0 !important; font-size: 13px !important; padding: 6px 12px !important; }
-    .message { max-width: 92% !important; font-size: 15px !important; padding: 14px 18px !important; }
-    .chat-container > div:last-child, .chat-container form { width: 92% !important; border-radius: 24px !important; }
-    #btn-mic-titan { bottom: 85px !important; right: 15px !important; width: 55px !important; height: 55px !important; }
-    #btn-mic-titan svg { width: 24px !important; height: 24px !important; }
+    #btn-mic-gemini { bottom: 20px; right: 20px; width: 50px; height: 50px; }
 }
 """
 
-JS_TITAN = """
+JS_GEMINI = """
 function() {
-    document.body.classList.add('dark');
-    
-    function initVoiceControl() {
-        if (document.getElementById('btn-mic-titan')) return;
+    function injectMic() {
+        if (document.getElementById('btn-mic-gemini')) return;
         
-        const btn = document.createElement('button');
-        btn.id = 'btn-mic-titan';
-        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
-        btn.title = "Comando de Voz";
+        let btn = document.createElement('button');
+        btn.id = 'btn-mic-gemini';
+        btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
         document.body.appendChild(btn);
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if(SpeechRecognition) {
+        if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
             recognition.lang = 'pt-BR';
             recognition.continuous = false;
             let isRecording = false;
-            
+
             btn.onclick = (e) => {
                 e.preventDefault();
-                if(isRecording) recognition.stop();
+                if (isRecording) recognition.stop();
                 else recognition.start();
             };
-            
-            recognition.onstart = () => { 
-                isRecording = true; 
-                btn.classList.add('mic-on'); 
+
+            recognition.onstart = () => {
+                isRecording = true;
+                btn.classList.add('mic-active');
             };
-            
+
             recognition.onresult = (event) => {
                 let text = event.results[0][0].transcript;
-                
                 let activeInput = null;
                 const textareas = document.querySelectorAll('textarea');
                 textareas.forEach(ta => { if (ta.offsetParent !== null) activeInput = ta; });
                 
-                if (!activeInput) {
-                    const inputs = document.querySelectorAll('input[type="text"]');
-                    inputs.forEach(i => { if (i.offsetParent !== null) activeInput = i; });
-                }
-
                 if (activeInput) {
                     activeInput.value = activeInput.value ? activeInput.value + ' ' + text : text;
                     activeInput.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             };
-            
-            recognition.onend = () => { isRecording = false; btn.classList.remove('mic-on'); };
-            recognition.onerror = () => { isRecording = false; btn.classList.remove('mic-on'); }
+
+            recognition.onend = () => { isRecording = false; btn.classList.remove('mic-active'); };
+            recognition.onerror = () => { isRecording = false; btn.classList.remove('mic-active'); };
         } else {
             btn.style.display = 'none';
         }
     }
-    
-    setTimeout(initVoiceControl, 1000);
-    setInterval(initVoiceControl, 2000);
+    setTimeout(injectMic, 1000);
+    setInterval(injectMic, 2000);
 }
 """
 
 # ==========================================
-# 7. CONSTRUÇÃO DA INTERFACE VISUAL (LIMPA E ESTRUTURADA)
+# 7. ESTRUTURA VISUAL (SIMPLES, ESTÁVEL, NATIVA)
 # ==========================================
-with gr.Blocks(title="Código de Ouro", theme=tema_titan, css=CSS_TITAN, fill_height=True) as interface:
+with gr.Blocks(title="Código de Ouro", theme=tema_gemini, css=CSS_GEMINI, head=PWA_HEAD, js=JS_GEMINI, fill_height=True) as interface:
     id_sessao_atual = gr.State(f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}")
 
-    with gr.Row():
+    # A Sidebar Oficial do Gradio. Ela recolhe e cria o menu de celular automaticamente!
+    with gr.Sidebar():
+        gr.HTML(f"""
+        <div style="text-align: center; margin-bottom: 20px;">
+            {TAG_LOGO}
+        </div>
+        """)
+        btn_novo = gr.Button("➕ Novo Atendimento", variant="primary")
         
-        # BARRA LATERAL (Agora guarda as configurações para despoluir a tela)
-        with gr.Column(scale=2, min_width=280, elem_classes="sidebar"):
-            gr.HTML(f"""
-            <div class="logo-container">
-                {TAG_LOGO}
-            </div>
-            """)
-            btn_novo = gr.Button("➕ Novo Atendimento", variant="primary")
-            
-            gr.Markdown("<br>### ⚙️ Engine da IA")
-            persona = gr.Dropdown(choices=["Assistente Padrão", "Gênio do Marketing", "Analista de Dados", "Estrategista de Negócios"], value="Assistente Padrão", label="Especialidade", interactive=True)
-            net = gr.Checkbox(label="🌐 Pesquisa Web Integrada", value=False)
-            btn_exportar = gr.Button("💾 Exportar Documento", variant="secondary")
-            
-            gr.Markdown("<br>### 📜 Histórico Criptografado")
-            lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), label="Sessões Salvas", interactive=True)
+        gr.HTML("<h3 style='color:#D4AF37; margin-top:20px; font-size:14px;'>⚙️ CONFIGURAÇÕES</h3>")
+        persona = gr.Dropdown(choices=["Assistente Padrão", "Gênio do Marketing", "Analista de Dados"], value="Assistente Padrão", label="Especialidade", interactive=True)
+        net = gr.Checkbox(label="Pesquisa Web Integrada", value=False)
+        btn_exportar = gr.Button("💾 Exportar Documento")
+        
+        gr.HTML("<h3 style='color:#D4AF37; margin-top:20px; font-size:14px;'>📜 HISTÓRICO</h3>")
+        lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), label="Sessões", interactive=True)
+        with gr.Row():
+            btn_load = gr.Button("Abrir")
+            btn_atualizar = gr.Button("Atualizar")
+        btn_atualizar.click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
+
+    # Abas limpas sem forçar colunas
+    with gr.Tabs():
+        with gr.TabItem("💬 Console de IA"):
+            chat = gr.ChatInterface(
+                fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
+                chatbot=gr.Chatbot(show_label=False), textbox=gr.MultimodalTextbox(placeholder="Pergunte ao Código de Ouro...", container=False)
+            )
+            arq_exportado = gr.File(label="Documento Gerado", visible=False)
+            btn_exportar.click(exportar_conversa_docx, chat.chatbot, arq_exportado).then(lambda: gr.update(visible=True), None, arq_exportado)
+            btn_load.click(carregar_sessao_chat, lista_chats, [chat.chatbot, id_sessao_atual])
+            btn_novo.click(iniciar_novo_chat, None, [chat.chatbot, id_sessao_atual, lista_chats])
+
+        with gr.TabItem("📑 Analisador de Documentos"):
             with gr.Row():
-                btn_load = gr.Button("Abrir", variant="secondary")
-                btn_atualizar = gr.Button("Atualizar", variant="secondary")
-            btn_atualizar.click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
+                files = gr.File(label="Arquivos (PDF/Excel)", file_count="multiple")
+                with gr.Column():
+                    inst = gr.Textbox(label="Diretrizes", placeholder="O que eu devo analisar?", lines=3)
+                    btn_doc = gr.Button("Processar Dados", variant="primary")
+            res_doc = gr.Textbox(label="Relatório", lines=10)
+            btn_doc.click(gerar_dossie_lote, [files, inst], [res_doc])
 
-        # ÁREA CENTRAL DE ALTA PERFORMANCE (Apenas o conteúdo importa)
-        with gr.Column(scale=8):
-            with gr.Tabs():
-                
-                with gr.TabItem("💬 Console Central"):
-                    # O ChatInterface operando sozinho, sem menus em cima, no melhor estilo ChatGPT
-                    chat = gr.ChatInterface(
-                        fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
-                        chatbot=gr.Chatbot(show_label=False), textbox=gr.MultimodalTextbox(placeholder="Descreva seu projeto, anexe documentos ou imagens...", container=False)
-                    )
-                    arq_exportado = gr.File(label="Documento Gerado", visible=False)
-                    
-                    # Conexões dos botões da Sidebar com a tela de Chat
-                    btn_exportar.click(exportar_conversa_docx, chat.chatbot, arq_exportado).then(lambda: gr.update(visible=True), None, arq_exportado)
-                    btn_load.click(carregar_sessao_chat, lista_chats, [chat.chatbot, id_sessao_atual])
-                    btn_novo.click(iniciar_novo_chat, None, [chat.chatbot, id_sessao_atual, lista_chats])
-
-                with gr.TabItem("📑 Analisador de Data Room"):
-                    gr.Markdown("### 🧠 Extração e Análise Profunda")
-                    with gr.Row():
-                        with gr.Column(scale=4):
-                            files = gr.File(label="Upload de PDFs, Excel ou Word", file_count="multiple")
-                            inst = gr.Textbox(label="Diretriz da Análise", placeholder="O que eu devo buscar ou estruturar com base nestes arquivos?", lines=4)
-                            btn_doc = gr.Button("Iniciar Processamento", variant="primary")
-                        with gr.Column(scale=6):
-                            res_doc = gr.Textbox(label="Relatório Analítico", lines=15)
-                    btn_doc.click(gerar_dossie_lote, [files, inst], [res_doc])
-
-                with gr.TabItem("🗂️ Cofre de Ativos"):
-                    btn_att_gal = gr.Button("🔄 Sincronizar Galeria", variant="primary")
-                    gal = gr.Gallery(columns=4, height="auto", label="Mídias Recentes")
-                    btn_att_gal.click(atualizar_galeria_imagens, None, gal)
+        with gr.TabItem("🗂️ Galeria"):
+            btn_att_gal = gr.Button("🔄 Atualizar Mídias", variant="primary")
+            gal = gr.Gallery(columns=4, height="auto")
+            btn_att_gal.click(atualizar_galeria_imagens, None, gal)
 
 # ==========================================
 # 8. LANÇAMENTO SEGURO
@@ -572,11 +519,7 @@ launch_args = {
     "server_name": "0.0.0.0", 
     "server_port": int(os.environ.get("PORT", 10000)),
     "auth": usuarios if usuarios else None, 
-    "auth_message": LOGIN_HACK,
-    "js": JS_TITAN, 
-    "head": PWA_HEAD
+    "auth_message": LOGIN_HACK
 }
-
-if caminho_logo: launch_args["favicon_path"] = caminho_logo
 
 interface.launch(**launch_args)
