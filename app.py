@@ -403,18 +403,23 @@ button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !importan
 .chat-container > div:last-child, .chat-container form { background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; max-width: 900px !important; width: 96% !important; margin: 0 auto 15px auto !important; }
 .chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; width: 100% !important;}
 .chat-container textarea:focus { border: none !important; box-shadow: none !important; }
+
+/* ANIMAÇÃO MIC GLOBAL E ESTILO DO BOTÃO FLUTUANTE */
+#bot-mic-global { transition: all 0.3s ease; }
+#bot-mic-global:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(212,175,55,0.8) !important; }
+@keyframes pulse-anim-global { 
+    0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.8); background: #ff4444; color: #fff;} 
+    70% { box-shadow: 0 0 15px 25px rgba(255, 68, 68, 0); background: #cc0000; color: #fff;} 
+    100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); background: #ff4444; color: #fff;} 
+}
+.pulse-anim-global { animation: pulse-anim-global 1.5s infinite !important; }
+
 button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
 button.primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
 input { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; width: 100% !important;}
 ::-webkit-scrollbar {width: 6px; height: 6px;}
 ::-webkit-scrollbar-track {background: transparent;}
 ::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
-
-/* ANIMAÇÃO MIC */
-@keyframes pulse-anim { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); background-color: #330000; border-color: #ff4444;} 70% { box-shadow: 0 0 10px 15px rgba(255, 0, 0, 0); background-color: #000; border-color: #ff4444;} 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); background-color: #000; border-color: #D4AF37;} }
-.pulse-anim { animation: pulse-anim 1.5s infinite; color: #ff4444 !important;}
-.mic-btn-gold { transition: all 0.3s ease; }
-.mic-btn-gold:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(212,175,55,0.5); }
 
 @media screen and (max-width: 768px) {
     .sidebar { width: 100% !important; height: 100% !important; position: fixed !important; z-index: 9999999 !important; border-right: none !important; }
@@ -425,97 +430,88 @@ input { background: #111 !important; border: 1px solid #333 !important; border-r
 }
 """
 
-# INJEÇÃO JAVASCRIPT: AGRESSIVA PARA TODAS AS CAIXAS DE TEXTO
+# INJEÇÃO JAVASCRIPT: MICROFONE FLUTUANTE INDEPENDENTE E BLINDADO
 JS_CODE = """
-function() {
+() => {
     document.body.classList.add('dark');
     
-    function injectMic() {
-        const inputs = document.querySelectorAll('textarea, input[type="text"]');
-        inputs.forEach(input => {
-            // Garante que não há um botão duplicado ao lado
-            if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('mic-btn-gold')) {
-                const btn = document.createElement('button');
-                btn.className = 'mic-btn-gold';
-                btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
-                
-                // Posicionamento Blindado por cima de outros elementos do Gradio
-                btn.style.position = 'absolute';
-                if (input.tagName.toLowerCase() === 'textarea') {
-                    btn.style.right = '55px'; // Distância exata para não cobrir o botão "Enviar"
-                    btn.style.bottom = '12px';
-                } else {
-                    btn.style.right = '10px';
-                    btn.style.top = '50%';
-                    btn.style.transform = 'translateY(-50%)';
-                }
-                
-                btn.style.background = '#0A0A0A';
-                btn.style.border = '1px solid #D4AF37';
-                btn.style.color = '#D4AF37';
-                btn.style.cursor = 'pointer';
-                btn.style.zIndex = '999999';
-                btn.style.borderRadius = '50%';
-                btn.style.width = '36px';
-                btn.style.height = '36px';
-                btn.style.display = 'flex';
-                btn.style.alignItems = 'center';
-                btn.style.justifyContent = 'center';
-                btn.title = "Ditar Áudio";
+    function injectGlobalMic() {
+        if (!document.getElementById('bot-mic-global')) {
+            const btn = document.createElement('button');
+            btn.id = 'bot-mic-global';
+            btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
+            
+            // Fixo flutuante (Independente do Gradio, não trava a tela)
+            btn.style.position = 'fixed';
+            btn.style.bottom = '95px'; // Fica logo acima da área de digitação principal
+            btn.style.right = '20px';
+            btn.style.width = '60px';
+            btn.style.height = '60px';
+            btn.style.borderRadius = '50%';
+            btn.style.background = 'linear-gradient(145deg, #D4AF37, #AA7C11)';
+            btn.style.color = '#000';
+            btn.style.border = 'none';
+            btn.style.boxShadow = '0 10px 25px rgba(0,0,0,0.8)';
+            btn.style.zIndex = '9999999'; // Acima de tudo
+            btn.style.cursor = 'pointer';
+            btn.style.display = 'flex';
+            btn.style.alignItems = 'center';
+            btn.style.justifyContent = 'center';
+            btn.title = "Gravar Áudio";
+            
+            document.body.appendChild(btn);
 
-                const parent = input.parentElement;
-                if (window.getComputedStyle(parent).position === 'static') {
-                    parent.style.position = 'relative';
-                }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'pt-BR';
+                recognition.continuous = false;
+                let isRecording = false;
                 
-                // Injeta diretamente APÓS o input, furando qualquer bloqueio de layout
-                input.insertAdjacentElement('afterend', btn);
-
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if(SpeechRecognition) {
-                    const recognition = new SpeechRecognition();
-                    recognition.lang = 'pt-BR';
-                    recognition.continuous = false;
-                    let isRecording = false;
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    if(isRecording) recognition.stop();
+                    else recognition.start();
+                };
+                
+                recognition.onstart = () => { 
+                    isRecording = true; 
+                    btn.classList.add('pulse-anim-global'); 
+                };
+                
+                recognition.onresult = (event) => {
+                    let text = event.results[0][0].transcript;
+                    // Procura as caixas de texto ativas na tela para jogar a transcrição
+                    let textareas = document.querySelectorAll('textarea');
+                    let activeInput = textareas[textareas.length - 1]; // Pega o principal da tela atual
                     
-                    btn.onclick = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if(isRecording) recognition.stop();
-                        else recognition.start();
-                    };
-                    
-                    recognition.onstart = () => { 
-                        isRecording = true; 
-                        btn.classList.add('pulse-anim'); 
-                        input.placeholder = "🎙️ Ouvindo... Pode falar!"; 
-                    };
-                    
-                    recognition.onresult = (event) => {
-                        let text = event.results[0][0].transcript;
-                        input.value = input.value ? input.value + ' ' + text : text;
-                        input.dispatchEvent(new Event('input', { bubbles: true }));
-                    };
-                    
-                    recognition.onend = () => { 
-                        isRecording = false; 
-                        btn.classList.remove('pulse-anim'); 
-                        input.placeholder = "Mensagem..."; 
-                    };
-                    
-                    recognition.onerror = () => {
-                        isRecording = false; 
-                        btn.classList.remove('pulse-anim'); 
-                        input.placeholder = "Erro. Tente de novo...";
+                    if (!activeInput) {
+                        activeInput = document.querySelector('input[type="text"]');
                     }
-                } else {
-                    btn.style.display = 'none';
+                    
+                    if (activeInput) {
+                        activeInput.value = activeInput.value ? activeInput.value + ' ' + text : text;
+                        activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                };
+                
+                recognition.onend = () => { 
+                    isRecording = false; 
+                    btn.classList.remove('pulse-anim-global'); 
+                };
+                
+                recognition.onerror = () => {
+                    isRecording = false; 
+                    btn.classList.remove('pulse-anim-global'); 
                 }
+            } else {
+                btn.style.display = 'none';
             }
-        });
+        }
     }
-    // O radar passa a cada 1.5s pra garantir que o botão esteja lá mesmo se a tela mudar
-    setInterval(injectMic, 1500);
+    
+    // Injeta com segurança após o site carregar
+    setTimeout(injectGlobalMic, 1500);
 }
 """
 
