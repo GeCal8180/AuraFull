@@ -338,7 +338,7 @@ def gerar_dossie_lote(arquivos, instrucao, progresso=gr.Progress()):
     except Exception as e: return f"Erro: {e}", None, "", ""
 
 # ==========================================
-# 6. DESIGN SYSTEM E RESPONSIVIDADE LIQUIDA
+# 6. CONFIGURAÇÕES VISUAIS E HACKS CSS
 # ==========================================
 
 tema_ouro = gr.themes.Soft(font=[gr.themes.GoogleFont("Inter"), "sans-serif"]).set(
@@ -377,57 +377,32 @@ LOGIN_HACK = """
 </div>
 """.replace("[LOGO_PLACEHOLDER]", TAG_LOGO)
 
-# CSS Totalmente Fluido. Box-sizing corrige o vazamento da tela.
 CSS_APP = """
 * { box-sizing: border-box !important; }
 body, html { margin: 0 !important; padding: 0 !important; background-color: #000 !important; overflow-x: hidden !important; width: 100% !important; height: 100% !important; }
 footer {display: none !important;}
-
-/* Gradio Container Liquido */
 .gradio-container { max-width: 100% !important; width: 100% !important; border: none !important; overflow-x: hidden !important; margin: 0 !important; padding: 0 !important;}
 .contain { padding: 0 !important; width: 100% !important;}
-
-/* Botão da Sidebar */
 .sidebar-button, button[aria-label*="sidebar" i], button[title*="sidebar" i] { position: fixed !important; top: 15px !important; left: 15px !important; background-color: #0E0E0E !important; border: 1px solid #D4AF37 !important; border-radius: 50% !important; z-index: 999999 !important; box-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important; width: 45px !important; height: 45px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important;}
 .sidebar-button svg, button[aria-label*="sidebar" i] svg, button[title*="sidebar" i] svg { color: #D4AF37 !important; stroke: #D4AF37 !important; fill: transparent !important; width: 22px !important; height: 22px !important;}
-
-/* Sidebar */
 .sidebar { background-color: #050505 !important; border-right: 1px solid #111 !important; width: 280px !important; padding: 20px !important; height: 100vh !important; }
 .logo-container { text-align: center; padding: 10px 0 20px 0; border-bottom: 1px solid #111; margin-bottom: 20px; width: 100%;}
 .logo-title { color: #D4AF37; font-size: 22px; font-weight: 900; margin: 0; letter-spacing: 2px;}
-
-/* Botões Secundários */
 button.secondary, .dropdown { background-color: #111 !important; color: #CCC !important; border: 1px solid #333 !important; border-radius: 15px !important; transition: 0.3s !important;}
 button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !important; }
-
-/* Abas */
 .tabs { margin-top: 0 !important; border: none !important; width: 100% !important; }
 .tab-nav { background: #000 !important; border-bottom: 1px solid #111 !important; padding: 10px 0 !important; justify-content: center !important; gap: 10px !important; width: 100%; flex-wrap: wrap;}
 .tab-nav button { background: transparent !important; color: #666 !important; border: none !important; border-radius: 20px !important; padding: 8px 15px !important; font-size: 14px !important;}
 .tab-nav button.selected { color: #D4AF37 !important; background: #0A0A0A !important; border: 1px solid #222 !important; font-weight: bold;}
-
-/* Chat Central Responsivo */
 .chat-container { display: flex !important; flex-direction: column !important; height: 85vh !important; width: 100% !important; background: transparent !important; border: none !important; }
 .chatbot { flex-grow: 1 !important; background: transparent !important; border: none !important; max-width: 900px !important; margin: 0 auto !important; width: 100% !important; overflow-x: hidden !important;}
-
-/* Mensagens */
 .message-wrap { padding: 20px 0 !important; width: 100% !important;}
 .message { border-radius: 20px !important; padding: 15px 20px !important; font-size: 16px !important; line-height: 1.6; max-width: 85% !important; word-wrap: break-word !important; word-break: break-word !important;}
 .message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
 .message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important;}
-
-/* Caixa de Input (Pílula) */
 .chat-container > div:last-child, .chat-container form { background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; padding: 5px 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; max-width: 900px !important; width: 96% !important; margin: 0 auto 15px auto !important; }
 .chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; width: 100% !important;}
 .chat-container textarea:focus { border: none !important; box-shadow: none !important; }
-
-/* Microfone */
-.mic-btn-gold { transition: all 0.3s ease; }
-.mic-btn-gold:hover { color: #D4AF37 !important; transform: scale(1.1); }
-@keyframes pulse-anim { 0% { transform: scale(1); opacity: 1; color: #D4AF37; } 50% { transform: scale(1.2); opacity: 0.8; color: #FF4444; } 100% { transform: scale(1); opacity: 1; color: #D4AF37; } }
-.pulse-anim { animation: pulse-anim 1.5s infinite; color: #D4AF37 !important; }
-
-/* Diversos */
 button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
 button.primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
 input { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; width: 100% !important;}
@@ -435,7 +410,12 @@ input { background: #111 !important; border: 1px solid #333 !important; border-r
 ::-webkit-scrollbar-track {background: transparent;}
 ::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
 
-/* ================= MEDIA QUERIES MOBILE RIGOROSO ================= */
+/* ANIMAÇÃO MIC */
+@keyframes pulse-anim { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); background-color: #330000; border-color: #ff4444;} 70% { box-shadow: 0 0 10px 15px rgba(255, 0, 0, 0); background-color: #000; border-color: #ff4444;} 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); background-color: #000; border-color: #D4AF37;} }
+.pulse-anim { animation: pulse-anim 1.5s infinite; color: #ff4444 !important;}
+.mic-btn-gold { transition: all 0.3s ease; }
+.mic-btn-gold:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(212,175,55,0.5); }
+
 @media screen and (max-width: 768px) {
     .sidebar { width: 100% !important; height: 100% !important; position: fixed !important; z-index: 9999999 !important; border-right: none !important; }
     .chat-container { height: 80vh !important; width: 100% !important;}
@@ -445,27 +425,51 @@ input { background: #111 !important; border: 1px solid #333 !important; border-r
 }
 """
 
+# INJEÇÃO JAVASCRIPT: AGRESSIVA PARA TODAS AS CAIXAS DE TEXTO
 JS_CODE = """
-() => {
+function() {
     document.body.classList.add('dark');
+    
     function injectMic() {
-        const textareas = document.querySelectorAll('textarea');
-        textareas.forEach(textarea => {
-            const parent = textarea.parentElement;
-            if (parent && !parent.querySelector('.mic-btn-gold')) {
+        const inputs = document.querySelectorAll('textarea, input[type="text"]');
+        inputs.forEach(input => {
+            // Garante que não há um botão duplicado ao lado
+            if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('mic-btn-gold')) {
                 const btn = document.createElement('button');
                 btn.className = 'mic-btn-gold';
-                btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
+                btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
+                
+                // Posicionamento Blindado por cima de outros elementos do Gradio
                 btn.style.position = 'absolute';
-                btn.style.right = '48px'; 
-                btn.style.bottom = '10px';
-                btn.style.background = 'transparent';
-                btn.style.border = 'none';
-                btn.style.color = '#888';
+                if (input.tagName.toLowerCase() === 'textarea') {
+                    btn.style.right = '55px'; // Distância exata para não cobrir o botão "Enviar"
+                    btn.style.bottom = '12px';
+                } else {
+                    btn.style.right = '10px';
+                    btn.style.top = '50%';
+                    btn.style.transform = 'translateY(-50%)';
+                }
+                
+                btn.style.background = '#0A0A0A';
+                btn.style.border = '1px solid #D4AF37';
+                btn.style.color = '#D4AF37';
                 btn.style.cursor = 'pointer';
-                btn.style.zIndex = '100';
-                parent.style.position = 'relative';
-                parent.appendChild(btn);
+                btn.style.zIndex = '999999';
+                btn.style.borderRadius = '50%';
+                btn.style.width = '36px';
+                btn.style.height = '36px';
+                btn.style.display = 'flex';
+                btn.style.alignItems = 'center';
+                btn.style.justifyContent = 'center';
+                btn.title = "Ditar Áudio";
+
+                const parent = input.parentElement;
+                if (window.getComputedStyle(parent).position === 'static') {
+                    parent.style.position = 'relative';
+                }
+                
+                // Injeta diretamente APÓS o input, furando qualquer bloqueio de layout
+                input.insertAdjacentElement('afterend', btn);
 
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if(SpeechRecognition) {
@@ -473,22 +477,45 @@ JS_CODE = """
                     recognition.lang = 'pt-BR';
                     recognition.continuous = false;
                     let isRecording = false;
+                    
                     btn.onclick = (e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         if(isRecording) recognition.stop();
                         else recognition.start();
                     };
-                    recognition.onstart = () => { isRecording = true; btn.classList.add('pulse-anim'); textarea.placeholder = "🎙️ Ouvindo..."; };
-                    recognition.onresult = (event) => {
-                        textarea.value += (textarea.value ? ' ' : '') + event.results[0][0].transcript;
-                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    recognition.onstart = () => { 
+                        isRecording = true; 
+                        btn.classList.add('pulse-anim'); 
+                        input.placeholder = "🎙️ Ouvindo... Pode falar!"; 
                     };
-                    recognition.onend = () => { isRecording = false; btn.classList.remove('pulse-anim'); textarea.placeholder = "Envie uma mensagem..."; };
-                } else { btn.style.display = 'none'; }
+                    
+                    recognition.onresult = (event) => {
+                        let text = event.results[0][0].transcript;
+                        input.value = input.value ? input.value + ' ' + text : text;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                    };
+                    
+                    recognition.onend = () => { 
+                        isRecording = false; 
+                        btn.classList.remove('pulse-anim'); 
+                        input.placeholder = "Mensagem..."; 
+                    };
+                    
+                    recognition.onerror = () => {
+                        isRecording = false; 
+                        btn.classList.remove('pulse-anim'); 
+                        input.placeholder = "Erro. Tente de novo...";
+                    }
+                } else {
+                    btn.style.display = 'none';
+                }
             }
         });
     }
-    setInterval(injectMic, 1000);
+    // O radar passa a cada 1.5s pra garantir que o botão esteja lá mesmo se a tela mudar
+    setInterval(injectMic, 1500);
 }
 """
 
@@ -520,7 +547,6 @@ with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interfa
                     net = gr.Checkbox(label="🌐 Web", scale=1)
                     btn_exportar = gr.Button("💾 Exportar", variant="secondary", scale=1)
             
-            # Aqui removi a altura fixa de 700px. Agora o CSS é quem manda e se adapta.
             chat = gr.ChatInterface(
                 fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
                 chatbot=gr.Chatbot(show_label=False), textbox=gr.MultimodalTextbox(placeholder="Envie uma mensagem...", container=False)
