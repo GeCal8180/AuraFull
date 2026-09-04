@@ -52,7 +52,6 @@ for d in [DIRETORIO, DIR_CASOS, DIR_MIDIA, DIR_CHATS]:
 # ==========================================
 # 2.5. CAPTURA DA LOGOMARCA OFICIAL
 # ==========================================
-# O robô agora busca EXATAMENTE o nome do seu arquivo de imagem
 TAG_LOGO = ""
 nome_logo = "chamariz-sem-fundo.png"
 
@@ -234,7 +233,7 @@ PODERES EXECUTIVOS NO CHAT:
 
     # Processamento de Gatilhos
     anexos_html = ""
-    match_img = re.search(r'\[AÇÃO_IMAGEM:\s*(.*?)(?:\|\s*(\w+))?\]', resposta_acumulada)
+    match_img = re.search(r'\[AÇÃO_IMAGEM:\s*(.*?)(?:\Vert{}\s*(\w+))?\]', resposta_acumulada)
     if match_img:
         prompt_i = match_img.group(1).strip()
         prop_i = "Vertical" if (match_img.group(2) and "vertical" in match_img.group(2).lower()) else "Quadrado"
@@ -393,92 +392,4 @@ body, html { margin: 0 !important; padding: 0 !important; background-color: #000
 /* BALÕES DE MENSAGEM */
 .message-wrap { padding: 20px 0 !important; }
 .message { border-radius: 20px !important; padding: 15px 25px !important; font-size: 16px !important; line-height: 1.6; max-width: 80% !important; }
-.message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFFFFF !important; margin-left: auto !important; border-bottom-right-radius: 5px !important; }
-.message.bot { background: transparent !important; border: none !important; color: #E0E0E0 !important; margin-right: auto !important; padding-left: 0 !important;}
-
-/* A PÍLULA FLUTUANTE DE DIGITAR MENSAGEM */
-.chat-container > div:last-child, .chat-container form { 
-    background: #0E0E0E !important; border: 1px solid #333 !important; border-radius: 30px !important; 
-    padding: 5px 15px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; 
-    max-width: 850px !important; margin: 0 auto 20px auto !important; width: 100% !important; 
-}
-.chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; }
-.chat-container textarea:focus { border: none !important; box-shadow: none !important; }
-
-button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; border: none !important; border-radius: 30px !important; font-weight: bold !important; transition: 0.3s !important;}
-button.primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4) !important; }
-input, .dropdown { background: #111 !important; border: 1px solid #333 !important; border-radius: 15px !important; color: #FFF !important; }
-
-::-webkit-scrollbar {width: 6px; height: 6px;}
-::-webkit-scrollbar-track {background: transparent;}
-::-webkit-scrollbar-thumb {background: #D4AF37; border-radius: 10px;}
-"""
-
-# ==========================================
-# 8. CONSTRUÇÃO DA INTERFACE VISUAL
-# ==========================================
-with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interface:
-    
-    id_sessao_atual = gr.State(f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}")
-
-    with gr.Sidebar(open=True):
-        gr.HTML(f"""
-        <div class="logo-container">
-            {TAG_LOGO}
-            <h1 class="logo-title">CÓDIGO DE OURO</h1>
-        </div>
-        """)
-        btn_novo = gr.Button("➕ Novo Chat", variant="primary")
-        gr.Markdown("<br>### 📜 Histórico")
-        lista_chats = gr.Dropdown(choices=listar_sessoes_chat(), label="", interactive=True)
-        btn_load = gr.Button("Abrir Conversa")
-        gr.Button("🔄 Atualizar Histórico").click(lambda: gr.update(choices=listar_sessoes_chat()), None, lista_chats)
-
-    with gr.Tabs():
-        
-        with gr.TabItem("💬 Chat IA"):
-            with gr.Accordion("⚙️ Ajustes", open=False):
-                with gr.Row():
-                    persona = gr.Dropdown(choices=["Assistente Padrão", "Especialista em Marketing", "Analista de Dados"], value="Assistente Padrão", label="Especialidade", scale=2)
-                    net = gr.Checkbox(label="🌐 Web", scale=1)
-                    btn_exportar = gr.Button("💾 Exportar (Word)", variant="secondary", scale=1)
-            
-            chat = gr.ChatInterface(
-                fn=responder_chat_central, multimodal=True, additional_inputs=[persona, net, id_sessao_atual],
-                chatbot=gr.Chatbot(height=700, show_label=False),
-                textbox=gr.MultimodalTextbox(placeholder="Envie uma mensagem, foto ou documento...", container=False)
-            )
-            arq_exportado = gr.File(label="Arquivo", visible=False)
-            btn_exportar.click(exportar_conversa_docx, chat.chatbot, arq_exportado).then(lambda: gr.update(visible=True), None, arq_exportado)
-            
-            btn_load.click(carregar_sessao_chat, lista_chats, [chat.chatbot, id_sessao_atual])
-            btn_novo.click(iniciar_novo_chat, None, [chat.chatbot, id_sessao_atual, lista_chats])
-
-        with gr.TabItem("📑 Documentos"):
-            with gr.Row():
-                files = gr.File(label="Upload (PDF/Excel)", file_count="multiple")
-                inst = gr.Textbox(label="Instrução", placeholder="O que devo analisar?")
-            btn_doc = gr.Button("Iniciar Análise Profissional", variant="primary")
-            res_doc = gr.Textbox(label="Resultado", lines=10)
-
-        with gr.TabItem("🗂️ Cofre"):
-            btn_att_gal = gr.Button("🔄 Sincronizar Galeria Visual", variant="primary")
-            gal = gr.Gallery(columns=4, height="auto")
-            btn_att_gal.click(atualizar_galeria_imagens, None, gal)
-
-# ==========================================
-# 9. LANÇAMENTO 
-# ==========================================
-usuarios = []
-for i in ["", "_1", "_2", "_3"]:
-    u, s = os.environ.get(f"LOGIN_USUARIO{i}" if i=="" else f"USUARIO{i}")
-    s = os.environ.get(f"LOGIN_SENHA{i}" if i=="" else f"SENHA{i}")
-    if u and s: usuarios.append((u, s))
-
-interface.launch(
-    server_name="0.0.0.0", 
-    server_port=int(os.environ.get("PORT", 10000)),
-    auth=usuarios,
-    auth_message=LOGIN_HACK, 
-    js="() => { document.body.classList.add('dark'); }"
-)
+.message.user { background: rgba(212, 175, 55, 0.05) !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #FFFFFF !important; margin-left: auto !important;
