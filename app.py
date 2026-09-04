@@ -362,7 +362,6 @@ PWA_HEAD = f"""
 
 LOGIN_HACK = """
 <style>
-    * { box-sizing: border-box !important; }
     body, main, .wrap { background-color: #000 !important; color: #fff !important; margin: 0; padding: 0; width: 100%; overflow-x: hidden;}
     form { background: #0A0A0A !important; border: 1px solid rgba(212,175,55,0.4) !important; border-radius: 30px !important; box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important; padding: 40px !important; max-width: 90% !important; margin: auto !important; width: 400px;}
     button.primary { background: linear-gradient(145deg, #D4AF37, #AA7C11) !important; color: #000 !important; font-weight: 800 !important; border-radius: 30px !important; border: none !important; font-size: 16px !important; margin-top: 15px !important; transition: 0.3s !important; width: 100%;}
@@ -378,7 +377,6 @@ LOGIN_HACK = """
 """.replace("[LOGO_PLACEHOLDER]", TAG_LOGO)
 
 CSS_APP = """
-* { box-sizing: border-box !important; }
 body, html { margin: 0 !important; padding: 0 !important; background-color: #000 !important; overflow-x: hidden !important; width: 100% !important; height: 100% !important; }
 footer {display: none !important;}
 .gradio-container { max-width: 100% !important; width: 100% !important; border: none !important; overflow-x: hidden !important; margin: 0 !important; padding: 0 !important;}
@@ -404,9 +402,9 @@ button.secondary:hover { border-color: #D4AF37 !important; color: #FFF !importan
 .chat-container textarea { background: transparent !important; border: none !important; color: #FFF !important; box-shadow: none !important; width: 100% !important;}
 .chat-container textarea:focus { border: none !important; box-shadow: none !important; }
 
-/* ANIMAÇÃO MIC GLOBAL E ESTILO DO BOTÃO FLUTUANTE */
+/* ANIMAÇÃO MIC GLOBAL */
 #bot-mic-global { transition: all 0.3s ease; }
-#bot-mic-global:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(212,175,55,0.8) !important; }
+#bot-mic-global:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(212,175,55,0.8) !important; }
 @keyframes pulse-anim-global { 
     0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.8); background: #ff4444; color: #fff;} 
     70% { box-shadow: 0 0 15px 25px rgba(255, 68, 68, 0); background: #cc0000; color: #fff;} 
@@ -430,95 +428,103 @@ input { background: #111 !important; border: 1px solid #333 !important; border-r
 }
 """
 
-# INJEÇÃO JAVASCRIPT: MICROFONE FLUTUANTE INDEPENDENTE E BLINDADO
 JS_CODE = """
-() => {
+function() {
     document.body.classList.add('dark');
     
-    function injectGlobalMic() {
-        if (!document.getElementById('bot-mic-global')) {
-            const btn = document.createElement('button');
-            btn.id = 'bot-mic-global';
-            btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
-            
-            // Fixo flutuante (Independente do Gradio, não trava a tela)
-            btn.style.position = 'fixed';
-            btn.style.bottom = '95px'; // Fica logo acima da área de digitação principal
-            btn.style.right = '20px';
-            btn.style.width = '60px';
-            btn.style.height = '60px';
-            btn.style.borderRadius = '50%';
-            btn.style.background = 'linear-gradient(145deg, #D4AF37, #AA7C11)';
-            btn.style.color = '#000';
-            btn.style.border = 'none';
-            btn.style.boxShadow = '0 10px 25px rgba(0,0,0,0.8)';
-            btn.style.zIndex = '9999999'; // Acima de tudo
-            btn.style.cursor = 'pointer';
-            btn.style.display = 'flex';
-            btn.style.alignItems = 'center';
-            btn.style.justifyContent = 'center';
-            btn.title = "Gravar Áudio";
-            
-            document.body.appendChild(btn);
+    function setupMic() {
+        if (document.getElementById('bot-mic-global')) return;
+        
+        const btn = document.createElement('button');
+        btn.id = 'bot-mic-global';
+        btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>';
+        
+        // Posição cravada no canto inferior direito para não travar o Gradio
+        btn.style.position = 'fixed';
+        btn.style.bottom = '100px'; 
+        btn.style.right = '20px';
+        btn.style.width = '60px';
+        btn.style.height = '60px';
+        btn.style.borderRadius = '50%';
+        btn.style.background = 'linear-gradient(145deg, #D4AF37, #AA7C11)';
+        btn.style.color = '#000';
+        btn.style.border = 'none';
+        btn.style.boxShadow = '0 10px 25px rgba(0,0,0,0.8)';
+        btn.style.zIndex = '9999999';
+        btn.style.cursor = 'pointer';
+        btn.style.display = 'flex';
+        btn.style.alignItems = 'center';
+        btn.style.justifyContent = 'center';
+        btn.title = "Falar com a IA";
+        
+        document.body.appendChild(btn);
 
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if(SpeechRecognition) {
-                const recognition = new SpeechRecognition();
-                recognition.lang = 'pt-BR';
-                recognition.continuous = false;
-                let isRecording = false;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if(SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.continuous = false;
+            let isRecording = false;
+            
+            btn.onclick = (e) => {
+                e.preventDefault();
+                if(isRecording) recognition.stop();
+                else recognition.start();
+            };
+            
+            recognition.onstart = () => { 
+                isRecording = true; 
+                btn.classList.add('pulse-anim-global'); 
+            };
+            
+            recognition.onresult = (event) => {
+                let text = event.results[0][0].transcript;
                 
-                btn.onclick = (e) => {
-                    e.preventDefault();
-                    if(isRecording) recognition.stop();
-                    else recognition.start();
-                };
+                // Encontra a caixa de texto que está ativa na tela naquele momento
+                let activeInput = null;
+                const textareas = document.querySelectorAll('textarea');
+                textareas.forEach(ta => {
+                    if (ta.offsetParent !== null) activeInput = ta; 
+                });
                 
-                recognition.onstart = () => { 
-                    isRecording = true; 
-                    btn.classList.add('pulse-anim-global'); 
-                };
-                
-                recognition.onresult = (event) => {
-                    let text = event.results[0][0].transcript;
-                    // Procura as caixas de texto ativas na tela para jogar a transcrição
-                    let textareas = document.querySelectorAll('textarea');
-                    let activeInput = textareas[textareas.length - 1]; // Pega o principal da tela atual
-                    
-                    if (!activeInput) {
-                        activeInput = document.querySelector('input[type="text"]');
-                    }
-                    
-                    if (activeInput) {
-                        activeInput.value = activeInput.value ? activeInput.value + ' ' + text : text;
-                        activeInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                };
-                
-                recognition.onend = () => { 
-                    isRecording = false; 
-                    btn.classList.remove('pulse-anim-global'); 
-                };
-                
-                recognition.onerror = () => {
-                    isRecording = false; 
-                    btn.classList.remove('pulse-anim-global'); 
+                if (!activeInput) {
+                    const inputs = document.querySelectorAll('input[type="text"]');
+                    inputs.forEach(i => {
+                        if (i.offsetParent !== null) activeInput = i;
+                    });
                 }
-            } else {
-                btn.style.display = 'none';
+
+                if (activeInput) {
+                    activeInput.value = activeInput.value ? activeInput.value + ' ' + text : text;
+                    activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            };
+            
+            recognition.onend = () => { 
+                isRecording = false; 
+                btn.classList.remove('pulse-anim-global'); 
+            };
+            
+            recognition.onerror = () => {
+                isRecording = false; 
+                btn.classList.remove('pulse-anim-global'); 
             }
+        } else {
+            btn.style.display = 'none';
+            console.log("Navegador não suporta transcrição.");
         }
     }
     
-    // Injeta com segurança após o site carregar
-    setTimeout(injectGlobalMic, 1500);
+    setTimeout(setupMic, 1000);
+    setInterval(setupMic, 3000);
 }
 """
 
 # ==========================================
 # 7. CONSTRUÇÃO DA INTERFACE VISUAL
 # ==========================================
-with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP) as interface:
+# O JS e o HEAD agora são passados corretamente dentro do gr.Blocks, que é a forma blindada.
+with gr.Blocks(title="Código de Ouro", theme=tema_ouro, css=CSS_APP, head=PWA_HEAD, js=JS_CODE) as interface:
     id_sessao_atual = gr.State(f"Chat_{datetime.now().strftime('%d%m_%H%M%S')}")
 
     with gr.Sidebar(open=True):
@@ -578,9 +584,7 @@ launch_args = {
     "server_name": "0.0.0.0", 
     "server_port": int(os.environ.get("PORT", 10000)),
     "auth": usuarios if usuarios else None, 
-    "auth_message": LOGIN_HACK, 
-    "js": JS_CODE, 
-    "head": PWA_HEAD
+    "auth_message": LOGIN_HACK
 }
 
 if caminho_logo: launch_args["favicon_path"] = caminho_logo
